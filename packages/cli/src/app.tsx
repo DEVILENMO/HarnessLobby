@@ -63,7 +63,8 @@ export function App({
 
   const room = client.state.rooms.find((r) => r.id === roomId) ?? client.state.rooms[0];
   const messages = room ? (client.state.messages[room.id] ?? []) : [];
-  const harnesses = client.state.harnesses;
+  // 离线 harness 不进列表：避免 mock/未接入身份一直挂着
+  const harnesses = client.state.harnesses.filter((h) => h.status !== 'offline');
   const bound = room ? client.boundForRoom(room.id) : [];
 
   const pushLog = (text: string, tone?: LogLine['tone']) =>
@@ -107,18 +108,20 @@ export function App({
               const human = id === 'u_you' ? 'You' : id;
               return h ? `harness  @${h.slug}  ${h.status}` : `human    ${human}`;
             })
+            .filter((line) => !line.includes('offline'))
             .join('\n'),
           'dim'
         );
         break;
       case '/harnesses':
         pushLog(
-          harnesses
+          client.state.harnesses
+            .filter((h) => h.status !== 'offline')
             .map(
               (h) =>
                 `@${h.slug.padEnd(14)} Mode A  ${h.status.padEnd(8)} ${h.capabilities.join(' / ')}`
             )
-            .join('\n'),
+            .join('\n') || '（无在线 harness）',
           'dim'
         );
         break;
@@ -227,14 +230,16 @@ export function App({
             {bound.length}
           </Text>
           <Box marginTop={1} flexDirection="column">
-            {harnesses.map((h) => (
-              <Text key={h.id}>
-                <Text color={h.status === 'online' ? '#3DDC97' : h.status === 'working' ? '#2FD4B8' : '#5C6B76'}>
-                  ●
-                </Text>{' '}
-                @{h.slug} · {h.status}
-              </Text>
-            ))}
+            {harnesses.length === 0 ? (
+              <Text dimColor>（无在线 harness · 接入后显示）</Text>
+            ) : (
+              harnesses.map((h) => (
+                <Text key={h.id}>
+                  <Text color={h.status === 'working' ? '#2FD4B8' : '#3DDC97'}>●</Text>{' '}
+                  @{h.slug} · {h.status}
+                </Text>
+              ))
+            )}
           </Box>
         </Box>
       </Box>
