@@ -8,12 +8,13 @@
     "examples/*"
   ],
   "scripts": {
+    "lobby": "npm run lobby -w @harness-lobby/cli",
     "dev:server": "npm run dev -w @harness-lobby/server",
     "dev:cli": "npm run dev -w @harness-lobby/cli",
     "dev:mock-harness": "npm run dev -w @harness-lobby/mock-harness",
     "icon": "npm run icon -w @harness-lobby/cli",
     "icon:full": "npm run icon:full -w @harness-lobby/cli",
-    "build": "npm run build -w @harness-lobby/protocol && npm run build -w @harness-lobby/server && npm run build -w @harness-lobby/plugin-sdk && npm run build -w @harness-lobby/cli && npm run build -w @harness-lobby/mock-harness",
+    "build": "npm run build -w @harness-lobby/protocol && npm run build -w @harness-lobby/server && npm run build -w @harness-lobby/plugin-sdk && npm run build -w @harness-lobby/mock-harness && npm run build -w @harness-lobby/cli",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {

@@ -9,11 +9,40 @@
 ```bash
 npm run icon -w @harness-lobby/cli          # 半块渲染
 npm run icon:full -w @harness-lobby/cli     # 全方块背景色渲染
+# 也可用：lobby icon / lobby icon --full
 ```
 
 TUI 启动页也会显示同一枚像素 icon。
 
-## 快速开始（三终端）
+## 快速开始（一键）
+
+```bash
+npm install
+npm run build   # 首次需要，生成各包 dist
+npm run lobby
+# 或在 PATH 上直接：lobby
+```
+
+一条命令会：内嵌 Lobby Server → 拉起 mock-harness → 进入 TUI。退出时一并清理。
+
+常用旗标：
+
+| 命令 | 说明 |
+|---|---|
+| `lobby` | 一键全开（默认） |
+| `lobby --no-mock` | 不拉 mock-harness |
+| `lobby --external` | 只连已有 Lobby |
+| `lobby --port 4311` | 内嵌 server 端口 |
+
+在 TUI 中：
+
+```
+@mock-harness 帮我把 ROS 节点改成支持 GelSight
+```
+
+会 lazy 创建 BoundSession，并看到 mock 流式回写。
+
+## 进阶（三终端）
 
 ```bash
 npm install

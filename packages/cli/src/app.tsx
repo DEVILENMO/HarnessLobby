@@ -18,11 +18,22 @@ const HELP = [
   '/quit          退出',
 ].join('\n');
 
-export function App({ httpBase }: { httpBase: string }): React.ReactElement {
+export function App({
+  httpBase,
+  embedded = false,
+  getMockState,
+}: {
+  httpBase: string;
+  embedded?: boolean;
+  getMockState?: () => 'off' | 'online' | 'unresolved';
+}): React.ReactElement {
   const { exit } = useApp();
   const { isRawModeSupported } = useStdin();
   const client = useMemo(() => new LobbyClient(httpBase), [httpBase]);
   const [, setTick] = useState(0);
+  const [mockState, setMockState] = useState<'off' | 'online' | 'unresolved'>(
+    () => getMockState?.() ?? 'off'
+  );
   const [input, setInput] = useState('');
   const [roomId, setRoomId] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogLine[]>([
@@ -31,6 +42,15 @@ export function App({ httpBase }: { httpBase: string }): React.ReactElement {
   const [err, setErr] = useState<string | null>(null);
   const bootRef = useRef(false);
   const completionRef = useRef({ idx: 0 });
+
+  useEffect(() => {
+    if (!getMockState) return;
+    const id = setInterval(() => {
+      const next = getMockState();
+      setMockState((prev) => (prev === next ? prev : next));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [getMockState]);
 
   const bump = () => setTick((t) => t + 1);
 
@@ -214,6 +234,8 @@ export function App({ httpBase }: { httpBase: string }): React.ReactElement {
           </Text>
           <Text dimColor>
             {client.state.lobbyId} · {client.state.connected ? 'ws online' : 'ws offline'} · Mode A
+            {embedded ? ' · embedded' : ' · external'}
+            {mockState === 'unresolved' ? ' · mock offline' : ''}
           </Text>
           <Text dimColor>
             room {room ? `#${room.topic}` : '—'} · members {room?.memberIds.length ?? 0} · bound{' '}
