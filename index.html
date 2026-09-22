@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Harness Lobby · 跨 Harness 协作面板</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app">
+    <!-- Top instrument strip -->
+    <header class="topbar">
+      <div class="topbar__brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle cx="9" cy="9" r="3" fill="currentColor"/>
+            <path d="M9 1.5v3M9 13.5v3M1.5 9h3M13.5 9h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M3.2 3.2l2.1 2.1M12.7 12.7l2.1 2.1M14.8 3.2l-2.1 2.1M5.3 12.7l-2.1 2.1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <strong>Harness Lobby</strong>
+          <span class="brand-text__id mono" id="lobby-id">lobby-7f2a</span>
+        </div>
+      </div>
+
+      <div class="topbar__status" id="topbar-status">
+        <span class="pill pill--ok"><i class="dot"></i>网关在线</span>
+        <span class="pill"><span class="pill__key mono">A</span> WS Plugin</span>
+        <span class="pill"><span class="pill__key pill__key--mcp mono">B</span> MCP Server</span>
+      </div>
+
+      <div class="topbar__actions">
+        <button type="button" class="btn btn--ghost" id="btn-connect-flow" title="模拟首次接入 harness">接入 Harness</button>
+        <button type="button" class="btn btn--ghost" id="btn-registry">注册表</button>
+        <button type="button" class="btn btn--primary" id="btn-new-room">新建房间</button>
+      </div>
+    </header>
+
+    <div class="shell">
+      <!-- Rooms rail -->
+      <aside class="rail">
+        <div class="rail__section">
+          <div class="rail__label">Rooms</div>
+          <nav class="room-list" id="room-list" aria-label="房间列表"></nav>
+        </div>
+
+        <div class="rail__section">
+          <div class="rail__label">
+            Harnesses
+            <button type="button" class="icon-btn" id="btn-add-harness" title="添加 harness">+</button>
+          </div>
+          <div class="harness-list" id="harness-list"></div>
+        </div>
+
+        <div class="rail__foot">
+          <div class="rail__label">Workspace</div>
+          <div class="workspace-card">
+            <div class="workspace-card__title">单实例 Owner</div>
+            <div class="workspace-card__meta mono">owner · invited humans</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Chat stage -->
+      <main class="stage">
+        <div class="stage__head">
+          <div class="stage__title-block">
+            <div class="stage__eyebrow mono" id="room-path">room /</div>
+            <h1 class="stage__title" id="room-title">—</h1>
+          </div>
+          <div class="stage__meta">
+            <span class="meta-chip" id="room-members">0 members</span>
+            <span class="meta-chip meta-chip--soft" id="room-bound">0 bound sessions</span>
+            <button type="button" class="btn btn--ghost btn--sm" id="btn-room-detail">房间详情</button>
+          </div>
+        </div>
+
+        <div class="stream" id="stream" aria-live="polite"></div>
+
+        <div class="composer">
+          <div class="composer__mention" id="mention-menu" hidden></div>
+          <div class="composer__bar">
+            <div class="composer__input-wrap">
+              <span class="composer__prompt mono" aria-hidden="true">›</span>
+              <textarea
+                id="composer-input"
+                class="composer__input"
+                rows="1"
+                placeholder="输入消息，@harness 派活…  例如：@minimax-code 帮我改 ROS 节点"
+                spellcheck="false"
+              ></textarea>
+            </div>
+            <div class="composer__tools">
+              <span class="composer__hint mono" id="composer-hint">enter 发送 · shift+enter 换行</span>
+              <button type="button" class="btn btn--primary" id="btn-send">发送</button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Context / agents panel -->
+      <aside class="side">
+        <div class="side__section">
+          <div class="rail__label">Agents in room</div>
+          <div class="agent-cards" id="agent-cards"></div>
+        </div>
+
+        <div class="side__section">
+          <div class="rail__label">Bound Sessions</div>
+          <div class="bound-list" id="bound-list"></div>
+        </div>
+
+        <div class="side__section side__section--grow">
+          <div class="rail__label">Activity</div>
+          <div class="activity" id="activity"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Modal root -->
+  <div class="modal-root" id="modal-root" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal__head">
+        <h2 id="modal-title">标题</h2>
+        <button type="button" class="icon-btn" data-close-modal aria-label="关闭">×</button>
+      </div>
+      <div class="modal__body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
