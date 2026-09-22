@@ -1,14 +1,20 @@
 ---
 feature: mimo-harness
-status: in-progress
+status: delivered
 updated: 2026-02-15
 branch: feat/mimo-harness
-commits: 749413c..749413c
+commits: 749413c..7bc165b
 ---
 
 # MiMo Harness Plugin（Mode A）
 
 ## Report
+
+**What was built** — `examples/mimo-harness`（`@harness-lobby/mimo-harness`）作为 Mode A 插件把 MiMo 接进 Lobby：`@mimo-code` 派活后，用 MiMoCode Capability API（`/v1/chat/completions` SSE）流式回写；每 room 绑定 `sess_mimo_<roomId>`。Server seed 增加 `mimo-code` / token `ilv_mimo_open`。缺 `MIMO_LLM_*` 时 fail-fast 并提示 `mimo llm-server issue`；`MIMO_HARNESS_MODE=echo` 可离线演示。错误路径 `finalize(partial+error)` 保留已出流式内容；SSE 尾行无换行也会 flush；`base_url` 带不带 `/v1` 均可。
+
+**Verification** — `npm run build` PASS；`npm run typecheck` PASS；`node --import tsx scripts/mimo-llm-unit.ts` PASS（SSE flush / partial-on-error / echo-full）；`node --import tsx scripts/mimo-harness-smoke.ts` PASS（注册/bind/final/缺凭证非零退出）。首轮 review 2 critical 已修，复审确认 FIXED 且无新增 critical。真实模型链路需本机 `mimo llm-server issue` 后验证（本环境无可用 `mimo` 二进制）。
+
+**Journey log** — 1) MiMo Desktop 扩展面是 Skill/MCP/workflow，不是 VS Code 插件；Lobby 接入件必须是独立 Mode A 进程。2) `applyFinal` 会**替换**全文，错误出口必须带上已 stream 的 partial。3) SSE 解析要在流结束时 flush decoder+残余 buf，否则丢最后一条 `data:`。4) Capability API 的 `base_url` 可能已含 `/v1`，拼 URL 要兼容。5) smoke 里等插件注册要用轮询，固定 sleep 容易误判。
 
 ## [S1] Problem
 
@@ -79,7 +85,7 @@ examples/mimo-harness/
 
 ## Tasks
 
-- [ ] T1: server seed 增加 `mimo-code` harness — acceptance: `/harnesses` 含 `slug=mimo-code` 且 token 可注册 (covers: S2)
-- [ ] T2: `examples/mimo-harness` LLM 流式桥 — acceptance: `MIMO_HARNESS_MODE=echo` 下注册、bind、stream、final 全通；配置 `MIMO_LLM_*` 时走 SSE chat (covers: S2; depends: T1)
-- [ ] T3: 错误与缺省配置 — acceptance: 缺凭证非 echo 时明确报错；LLM 401 以 final 回写错误文案 (covers: S2; depends: T2)
-- [ ] T4: README「接入 MiMo」 — acceptance: 文档可按步骤用 `mimo llm-server issue` 接入 (covers: S2; depends: T2)
+- [x] T1: server seed 增加 `mimo-code` harness — acceptance: `/harnesses` 含 `slug=mimo-code` 且 token 可注册 (covers: S2)
+- [x] T2: `examples/mimo-harness` LLM 流式桥 — acceptance: `MIMO_HARNESS_MODE=echo` 下注册、bind、stream、final 全通；配置 `MIMO_LLM_*` 时走 SSE chat (covers: S2; depends: T1)
+- [x] T3: 错误与缺省配置 — acceptance: 缺凭证非 echo 时明确报错；LLM 401 以 final 回写错误文案 (covers: S2; depends: T2)
+- [x] T4: README「接入 MiMo」 — acceptance: 文档可按步骤用 `mimo llm-server issue` 接入 (covers: S2; depends: T2)
