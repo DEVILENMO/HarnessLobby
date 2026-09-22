@@ -62,8 +62,11 @@ TUI 启动页也会显示同一枚像素 icon。
 ```bash
 npm install
 npm run build   # 首次需要，生成各包 dist
-npm run lobby
-# 或在 PATH 上直接：lobby
+
+# 安装为全局命令（任意目录可用）
+powershell -ExecutionPolicy Bypass -File scripts\install-lobby-global.ps1
+# 之后：
+lobby
 ```
 
 一条命令会：内嵌 Lobby Server → 进入 TUI。退出时一并清理。harness 需自行接入（如 `mimo-harness` / MCP 自接入），**不再附带假工人**。
