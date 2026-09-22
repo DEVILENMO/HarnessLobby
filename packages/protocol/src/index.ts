@@ -24,6 +24,8 @@ export interface Harness extends HarnessProfile {
 export interface Room {
   id: string;
   topic: string;
+  /** null = 公共大厅（所有人可进）；非 null = 仅 owner 人类可进 */
+  ownerId: string | null;
   memberIds: string[];
   createdAt: string;
 }

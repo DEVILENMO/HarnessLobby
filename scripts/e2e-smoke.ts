@@ -63,7 +63,7 @@ async function main() {
     id: string;
     topic: string;
   }[];
-  const room = rooms.find((r) => r.topic === '具身智能') ?? rooms[0];
+  const room = rooms.find((r) => r.topic === '大厅') ?? rooms[0];
   if (!room) throw new Error('no room');
 
   await fetch(`${httpBase}/rooms/${room.id}/messages`, {

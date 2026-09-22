@@ -30,7 +30,7 @@ async function main() {
   await sleep(100);
 
   const rooms = [...server.store.rooms.values()];
-  const room = rooms.find((r) => r.topic === '具身智能') ?? rooms[0];
+  const room = rooms.find((r) => r.topic === '大厅') ?? rooms[0];
   server.postUserMessage(room.id, 'u_you', '@mimo-code probe task');
   await sleep(50);
 

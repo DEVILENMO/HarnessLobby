@@ -50,38 +50,38 @@ export class Store {
     };
     this.harnesses.set(mimo.id, mimo);
 
-    const lobby = this.createRoom('大厅', ['u_you', 'h_mimo']);
-    const embodied = this.createRoom('具身智能', ['u_you', 'h_mimo']);
-    this.messages.get(lobby.id)?.push({
-      id: uid('m'),
-      roomId: lobby.id,
-      senderId: 'system',
-      content: '房间「大厅」已创建 · @mimo-code 可派活',
-      mentions: [],
-      createdAt: nowStamp(),
-      streamState: 'final',
-    });
-    this.messages.get(embodied.id)?.push({
-      id: uid('m'),
-      roomId: embodied.id,
-      senderId: 'system',
-      content: '房间「具身智能」已创建 · @mimo-code 可派活',
-      mentions: [],
-      createdAt: nowStamp(),
-      streamState: 'final',
-    });
+    // 公共大厅：所有人可进；工作间由用户 /room create 创建且仅 owner 可进
+    this.createRoom('大厅', ['u_you', 'h_mimo'], null);
   }
 
-  createRoom(topic: string, memberIds: string[] = ['u_you']): Room {
+  findRoomByTopic(topic: string): Room | undefined {
+    for (const r of this.rooms.values()) {
+      if (r.topic === topic) return r;
+    }
+    return undefined;
+  }
+
+  createRoom(topic: string, memberIds: string[] = ['u_you'], ownerId: string | null = 'u_you'): Room {
     const room: Room = {
       id: uid('r'),
       topic,
+      ownerId,
       memberIds: [...memberIds],
       createdAt: nowStamp(),
     };
     this.rooms.set(room.id, room);
     this.messages.set(room.id, []);
     return room;
+  }
+
+  canAccessRoom(room: Room, userId: string | null, isHarness: boolean): boolean {
+    if (room.ownerId === null) return true;
+    if (isHarness) return room.memberIds.includes(userId ?? '');
+    return room.ownerId === userId;
+  }
+
+  roomsForUser(userId: string): Room[] {
+    return [...this.rooms.values()].filter((r) => this.canAccessRoom(r, userId, false));
   }
 
   ensureMemberFromHarness(harness: Harness, profile: HarnessProfile): Member {

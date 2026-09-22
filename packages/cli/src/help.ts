@@ -10,7 +10,11 @@ const helpText = `Harness Lobby — 跨 harness 终端协作大厅
   lobby help                显示帮助
 
 TUI slash 命令
-  /rooms /join /new /members /harnesses /bound /reset /help /quit
+  /room create <主题>   创建私有工作间（仅你能进）
+  /room switch <主题>   切换房间（同时干多个活）
+  /room list            我能进的房间
+  /room add <slug>      把 harness 拉进当前房
+  /members /harnesses /bound /reset /help /quit
 
 派活
   @ + tab 补全 harness slug，例如  @mimo-code 你的任务

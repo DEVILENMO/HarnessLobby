@@ -7,15 +7,11 @@ import { PixelIcon } from './pixel-icon.js';
 type LogLine = { text: string; tone?: 'ok' | 'warn' | 'err' | 'dim' };
 
 const HELP = [
-  '/rooms          房间列表',
-  '/join <主题>     切换房间',
-  '/new <主题>      新建房间',
-  '/members       成员',
-  '/harnesses     harness 注册表',
-  '/bound         当前房间 bound sessions',
-  '/reset <slug>  解绑 session',
-  '/help          帮助',
-  '/quit          退出',
+  '/room create <主题>   创建私有工作间（仅你能进）',
+  '/room switch <主题>   切换房间（swich 同义）',
+  '/room list           我能进的房间',
+  '/room add <slug>     把 harness 拉进当前房',
+  '/members /harnesses /bound /reset /help /quit',
 ].join('\n');
 
 export function App({
@@ -53,7 +49,7 @@ export function App({
           ...l,
           { text: `已连接 ${client.state.lobbyId} · ${httpBase}`, tone: 'ok' },
         ]);
-        setRoomId((prev) => prev ?? client.state.rooms[0]?.id ?? null);
+        setRoomId((prev) => prev ?? client.state.rooms.find((r) => r.topic === '大厅')?.id ?? client.state.rooms[0]?.id ?? null);
       } catch (e) {
         setErr(`无法连接 Lobby Server：${String(e)}\n请先运行 npm run dev:server`);
       }
@@ -71,33 +67,87 @@ export function App({
     setLogs((l) => [...l.slice(-30), { text, tone }]);
 
   const runSlash = async (line: string): Promise<void> => {
-    const [cmd, ...rest] = line.trim().split(/\s+/);
+    const parts = line.trim().split(/\s+/);
+    const cmd = parts[0];
+    const rest = parts.slice(1);
     const arg = rest.join(' ');
+
+    const findRoom = (name: string) =>
+      client.state.rooms.find(
+        (r) => r.topic === name || r.id === name || r.topic.toLowerCase() === name.toLowerCase()
+      );
+
+    const switchRoom = (name: string): void => {
+      const target = findRoom(name);
+      if (!target) {
+        pushLog(`找不到房间：${name}（/room list 查看你能进的）`, 'err');
+        return;
+      }
+      setRoomId(target.id);
+      pushLog(
+        `已切换 → #${target.topic}${target.ownerId ? ' · 私有工作间' : ' · 公共大厅'}`,
+        'ok'
+      );
+    };
+
     switch (cmd) {
       case '/help':
         pushLog(HELP, 'dim');
         break;
-      case '/rooms':
-        pushLog(
-          client.state.rooms
-            .map((r) => `#${r.topic}  ${r.id}${r.id === room?.id ? '  ←' : ''}`)
-            .join('\n'),
-          'dim'
-        );
-        break;
-      case '/join': {
-        const target =
-          client.state.rooms.find((r) => r.topic === arg || r.id === arg) ?? null;
-        if (!target) return pushLog(`找不到房间：${arg}`, 'err');
-        setRoomId(target.id);
-        pushLog(`已进入 #${target.topic}`, 'ok');
+      case '/room':
+      case '/rooms': {
+        const sub = (rest[0] ?? '').toLowerCase();
+        const name = rest.slice(1).join(' ');
+        if (!sub || sub === 'list') {
+          pushLog(
+            client.state.rooms
+              .map((r) => {
+                const mark = r.id === room?.id ? '  ←' : '';
+                const vis = r.ownerId ? '私有' : '公共';
+                return `#${r.topic}  [${vis}]${mark}`;
+              })
+              .join('\n'),
+            'dim'
+          );
+          break;
+        }
+        if (sub === 'create') {
+          if (!name) return pushLog('用法：/room create <主题>', 'err');
+          const created = await client.createRoom(name, 'u_you');
+          setRoomId(created.id);
+          pushLog(`已创建工作间 #${created.topic} · 仅你能进，可 /room add 拉 harness`, 'ok');
+          break;
+        }
+        if (sub === 'switch' || sub === 'swich' || sub === 'use') {
+          if (!name) return pushLog('用法：/room switch <主题>', 'err');
+          switchRoom(name);
+          break;
+        }
+        if (sub === 'add' || sub === 'invite') {
+          if (!name || !room) return pushLog('用法：/room add <harness-slug>', 'err');
+          try {
+            await client.inviteHarness(room.id, name.replace(/^@/, ''));
+            pushLog(`已把 @${name.replace(/^@/, '')} 拉进 #${room.topic}`, 'ok');
+          } catch (e) {
+            pushLog(`邀请失败：${String(e)}`, 'err');
+          }
+          break;
+        }
+        pushLog('用法：/room create|switch|list|add …', 'err');
         break;
       }
+      case '/join':
       case '/new': {
-        if (!arg) return pushLog('用法：/new <主题>', 'err');
-        const r = await client.createRoom(arg);
-        setRoomId(r.id);
-        pushLog(`已创建 #${r.topic}`, 'ok');
+        // 兼容旧别名
+        if (cmd === '/new') {
+          if (!arg) return pushLog('用法：/room create <主题>', 'err');
+          const created = await client.createRoom(arg, 'u_you');
+          setRoomId(created.id);
+          pushLog(`已创建工作间 #${created.topic}`, 'ok');
+        } else {
+          if (!arg) return pushLog('用法：/room switch <主题>', 'err');
+          switchRoom(arg);
+        }
         break;
       }
       case '/members':
@@ -226,8 +276,8 @@ export function App({
             {embedded ? ' · embedded' : ' · external'}
           </Text>
           <Text dimColor>
-            room {room ? `#${room.topic}` : '—'} · members {room?.memberIds.length ?? 0} · bound{' '}
-            {bound.length}
+            room {room ? `#${room.topic}${room.ownerId ? ' · 私有' : ' · 公共'}` : '—'} · members{' '}
+            {room?.memberIds.length ?? 0} · bound {bound.length}
           </Text>
           <Box marginTop={1} flexDirection="column">
             {harnesses.length === 0 ? (
@@ -296,7 +346,7 @@ export function App({
         <Text color="#2FD4B8">▍</Text>
       </Box>
       <Text dimColor>
-        enter 发送 · @ + tab 补全 harness · /help 命令
+        enter 发送 · @ + tab 补全 · /room create|switch · /help
       </Text>
     </Box>
   );

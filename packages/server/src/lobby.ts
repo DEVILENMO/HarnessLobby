@@ -322,8 +322,10 @@ export class LobbyServer {
     for (const slug of mentions) {
       const harness = this.store.findHarnessBySlug(slug);
       if (!harness) continue;
+      // @harness：owner 或公共房可拉入成员
       if (!room.memberIds.includes(harness.id)) {
-        room.memberIds.push(harness.id);
+        const canInvite = room.ownerId === null || room.ownerId === senderId;
+        if (canInvite) room.memberIds.push(harness.id);
       }
 
       const { session, created } = this.store.ensureBound(roomId, harness.id);
@@ -413,21 +415,54 @@ export class LobbyServer {
       }
 
       if (method === 'GET' && path === '/rooms') {
-        json(200, [...this.store.rooms.values()]);
+        const userId = url.searchParams.get('userId') ?? 'u_you';
+        json(200, this.store.roomsForUser(userId));
         return;
       }
 
       if (method === 'POST' && path === '/rooms') {
-        const body = (await readJson(req)) as { topic?: string };
+        const body = (await readJson(req)) as { topic?: string; ownerId?: string };
         const topic = (body.topic ?? '').trim();
         if (!topic) return json(400, { error: 'topic required' });
-        const room = this.store.createRoom(topic, ['u_you']);
+        const ownerId = body.ownerId ?? 'u_you';
+        const room = this.store.createRoom(topic, [ownerId], ownerId);
+        return json(200, room);
+      }
+
+      const invite = path.match(/^\/rooms\/([^/]+)\/invite$/);
+      if (invite && method === 'POST') {
+        const roomId = invite[1];
+        const room = this.store.rooms.get(roomId);
+        const body = (await readJson(req)) as {
+          userId?: string;
+          slug?: string;
+          harnessId?: string;
+        };
+        const userId = body.userId ?? 'u_you';
+        if (!room) return json(404, { error: 'room not found' });
+        if (room.ownerId !== null && room.ownerId !== userId) {
+          return json(403, { error: '仅创建者可邀请 harness 进入工作间' });
+        }
+        const harness = body.harnessId
+          ? this.store.harnesses.get(body.harnessId)
+          : body.slug
+            ? this.store.findHarnessBySlug(body.slug)
+            : undefined;
+        if (!harness) return json(404, { error: 'harness not found' });
+        if (!room.memberIds.includes(harness.id)) {
+          room.memberIds.push(harness.id);
+        }
         return json(200, room);
       }
 
       const roomMsgs = path.match(/^\/rooms\/([^/]+)\/messages$/);
       if (roomMsgs) {
         const roomId = roomMsgs[1];
+        const room = this.store.rooms.get(roomId);
+        const userId = url.searchParams.get('userId') ?? 'u_you';
+        if (room && room.ownerId !== null && room.ownerId !== userId) {
+          return json(403, { error: '无权访问该房间（私有工作间仅创建者可进）' });
+        }
         if (method === 'GET') {
           const since = url.searchParams.get('since');
           let msgs = this.store.roomMessages(roomId);
@@ -444,17 +479,22 @@ export class LobbyServer {
           };
           const content = (body.content ?? '').trim();
           if (!content) return json(400, { error: 'content required' });
-          const msg = this.postUserMessage(
-            roomId,
-            body.senderId ?? 'u_you',
-            content
-          );
+          const sender = body.senderId ?? 'u_you';
+          if (room && sender.startsWith('u_') && !this.store.canAccessRoom(room, sender, false)) {
+            return json(403, { error: '无权在该房间发言' });
+          }
+          const msg = this.postUserMessage(roomId, sender, content);
           return json(200, { messageId: msg.id });
         }
       }
 
       const bound = path.match(/^\/rooms\/([^/]+)\/bound-sessions$/);
       if (bound && method === 'GET') {
+        const room = this.store.rooms.get(bound[1]);
+        const userId = url.searchParams.get('userId') ?? 'u_you';
+        if (room && room.ownerId !== null && room.ownerId !== userId) {
+          return json(403, { error: '无权访问' });
+        }
         return json(200, this.store.boundForRoom(bound[1]));
       }
 

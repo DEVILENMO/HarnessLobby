@@ -114,14 +114,14 @@ npm run dev:cli
 
 | 命令 | 说明 |
 |---|---|
-| `/rooms` | 房间列表 |
-| `/join <主题\|id>` | 切换房间 |
-| `/new <主题>` | 新建房间 |
-| `/members` | 成员 |
-| `/harnesses` | harness 注册表 |
-| `/bound` | 当前房间 bound sessions |
-| `/reset <slug>` | 解绑 session |
-| `/help` `/quit` | 帮助 / 退出 |
+| `/room create <主题>` | 创建**私有工作间**（仅创建者人类可进） |
+| `/room switch <主题>` | 切换房间（`swich` 同义） |
+| `/room list` | 我能进的房间 |
+| `/room add <slug>` | 把 harness 拉进当前房间 |
+| `/members` `/harnesses` `/bound` | 成员 / 在线 harness / bound |
+| `/reset <slug>` `/help` `/quit` | 解绑 / 帮助 / 退出 |
+
+默认进入公共大厅 `#大厅`。`@harness` 会把它拉进当前房并派活；私有工作间其他人类进不来。
 
 ## 包结构
 

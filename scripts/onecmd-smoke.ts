@@ -49,7 +49,7 @@ async function main() {
       id: string;
       topic: string;
     }[];
-    const room = rooms.find((r) => r.topic === '具身智能') ?? rooms[0];
+    const room = rooms.find((r) => r.topic === '大厅') ?? rooms[0];
     await fetch(`${stack.httpBase}/rooms/${room.id}/messages`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

@@ -140,12 +140,20 @@ export class LobbyClient {
     });
   }
 
-  async createRoom(topic: string): Promise<Room> {
-    const room = await this.postJson<Room>('/rooms', { topic });
+  async createRoom(topic: string, ownerId = 'u_you'): Promise<Room> {
+    const room = await this.postJson<Room>('/rooms', { topic, ownerId });
     this.state.rooms.push(room);
     this.state.messages[room.id] = this.state.messages[room.id] ?? [];
     this.emit();
     return room;
+  }
+
+  async inviteHarness(roomId: string, slug: string): Promise<void> {
+    await this.postJson(`/rooms/${roomId}/invite`, {
+      userId: 'u_you',
+      slug,
+    });
+    await this.refresh();
   }
 
   async sendMessage(roomId: string, content: string): Promise<void> {
