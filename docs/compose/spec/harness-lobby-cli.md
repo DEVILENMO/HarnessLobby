@@ -1,14 +1,20 @@
 ---
 feature: harness-lobby-cli
-status: in-progress
+status: delivered
 updated: 2026-02-15
 branch: feat/harness-lobby-cli
-commits: 4c15168..4c15168
+commits: 4c15168..7a76f0e
 ---
 
 # Harness Lobby CLI Skeleton (Mode A)
 
 ## Report
+
+**What was built** — TypeScript npm workspaces 可运行骨架：`@harness-lobby/protocol` 共享 Mode A 契约；`@harness-lobby/server` 提供 REST + WS mention 路由、`(roomId, harnessId)` BoundSession、离线 pending 补投；`@harness-lobby/plugin-sdk` 负责握手/重连/outbox/幂等 final；`examples/mock-harness` 独立进程流式回写；`@harness-lobby/cli` 为 Ink TUI（房间切换、`@`+Tab 补全、流式消息、slash 命令），启动区用 `icon.png` 采样的 24×24 彩色半块像素 logo（`npm run icon` / `icon:full`）。
+
+**Verification** — `npm run typecheck` PASS；`npm run build` PASS；`node --import tsx scripts/critical-probes.ts` PASS（messageId 连续性、final 终态、离线挂起落库）；`node --import tsx scripts/e2e-smoke.ts` PASS（register → @ 派活 → bind → 流式 final）；`npm run icon -w @harness-lobby/cli` 输出可辨识 AR 像素画。两轮 review：首轮 6 critical 已修，复审 22a16d1..7a76f0e 确认全部 FIXED 且无新增 critical。
+
+**Journey log** — 1) 产品形态从 Web 原型改为纯 CLI/TUI，旧 `index.html` 不在本切片接入。2) 仅 Mode A；Mode B MCP 留待下一切片。3) Review 探出 `newMessage` 虽支持自定义 id 但调用方未传，导致 stream/final 分叉——边界以 live probe 而非仅 E2E 发现。4) SDK 发送队列与幂等 final 是 Mode A 流式可靠性的前提，不能只做 happy path。5) Windows 下 PowerShell 无 heredoc，生成 `pixel-icon` 时用临时 Python 脚本落盘更稳。
 
 ## [S1] Problem
 
@@ -152,7 +158,7 @@ SDK 负责：握手、心跳、断线重连、把 `message.stream` 切片发送�
 - **全方块模式**（`harness-lobby icon --full`）：每像素两格背景色空位，共 24×24。
 - TUI 启动区固定渲染半块 logo；`packages/cli/src/pixel-icon.tsx` 同时导出 Ink 组件与纯 ANSI 字符串。
 
-验收：`npm run icon -w @harness-lobby/cli` 输出可辨识的品红→紫→蓝渐变 AR 图形，透明像素留空。
+验收：`npm run icon` / `npm run icon:full`（根脚本）或 `npm run icon -w @harness-lobby/cli` 输出可辨识的品红→紫→蓝渐变 AR 图形，透明像素留空。
 
 ### mock-harness 行为
 
@@ -196,10 +202,10 @@ npm run dev:cli
 
 ## Tasks
 
-- [ ] T1: monorepo 脚手架与 `@harness-lobby/protocol` 类型 — acceptance: `npm install` 成功，`protocol` 可被 server/cli/sdk 引用且类型与 S2 契约一致 (covers: S2)
-- [ ] T2: Lobby Server（REST + WS + mention 路由 + bound session + pending 补投）— acceptance: 对 `/health`、建房、发言、`@mock` 可返回；plugin 重连能收到 pending `task.new` (covers: S2; depends: T1)
-- [ ] T3: Plugin SDK — acceptance: 示例代码完成 register/bind/stream/final/status；断线自动重连并重注册 (covers: S2; depends: T1)
-- [ ] T4: mock-harness 独立进程 — acceptance: `node examples/mock-harness` 注册成功，收到 `task.new` 后流式回写并在 room 落 final (covers: S2; depends: T2, T3)
-- [ ] T5: CLI TUI — acceptance: `npm run dev:cli` 可列房/进房/发消息/`@` 补全/看流式；slash 命令可用；bound session 可见 (covers: S2; depends: T2, T1)
-- [ ] T6: 端到端演示脚本与 README 运行说明 — acceptance: 按 README 三终端命令可复现演示剧本 1–5 步 (covers: S2; depends: T2, T3, T4, T5)
-- [ ] T7: icon.png 像素 logo 渲染 — acceptance: `npm run icon` / `icon:full` 打印 24×24 彩色方块 AR 图标，TUI 启动区显示同一 logo (covers: S2; depends: T5)
+- [x] T1: monorepo 脚手架与 `@harness-lobby/protocol` 类型 — acceptance: `npm install` 成功，`protocol` 可被 server/cli/sdk 引用且类型与 S2 契约一致 (covers: S2)
+- [x] T2: Lobby Server（REST + WS + mention 路由 + bound session + pending 补投）— acceptance: 对 `/health`、建房、发言、`@mock` 可返回；plugin 重连能收到 pending `task.new` (covers: S2; depends: T1)
+- [x] T3: Plugin SDK — acceptance: 示例代码完成 register/bind/stream/final/status；断线自动重连并重注册 (covers: S2; depends: T1)
+- [x] T4: mock-harness 独立进程 — acceptance: `node examples/mock-harness` 注册成功，收到 `task.new` 后流式回写并在 room 落 final (covers: S2; depends: T2, T3)
+- [x] T5: CLI TUI — acceptance: `npm run dev:cli` 可列房/进房/发消息/`@` 补全/看流式；slash 命令可用；bound session 可见 (covers: S2; depends: T2, T1)
+- [x] T6: 端到端演示脚本与 README 运行说明 — acceptance: 按 README 三终端命令可复现演示剧本 1–5 步 (covers: S2; depends: T2, T3, T4, T5)
+- [x] T7: icon.png 像素 logo 渲染 — acceptance: `npm run icon` / `icon:full` 打印 24×24 彩色方块 AR 图标，TUI 启动区显示同一 logo (covers: S2; depends: T5)
