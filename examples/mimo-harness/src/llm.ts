@@ -15,20 +15,38 @@ async function* sseLines(res: Response): AsyncGenerator<string> {
   if (!reader) return;
   const decoder = new TextDecoder();
   let buf = '';
+  const emit = (line: string): string | null => {
+    const clean = line.replace(/\r$/, '');
+    if (clean.startsWith('data:')) return clean.slice(5).trim();
+    return null;
+  };
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
     buf += decoder.decode(value, { stream: true });
     let nl = buf.indexOf('\n');
     while (nl >= 0) {
-      const line = buf.slice(0, nl).replace(/\r$/, '');
+      const line = buf.slice(0, nl);
       buf = buf.slice(nl + 1);
-      if (line.startsWith('data:')) {
-        yield line.slice(5).trim();
-      }
+      const payload = emit(line);
+      if (payload !== null) yield payload;
       nl = buf.indexOf('\n');
     }
   }
+  buf += decoder.decode();
+  if (buf.length) {
+    for (const line of buf.split('\n')) {
+      const payload = emit(line);
+      if (payload !== null) yield payload;
+    }
+  }
+}
+
+function chatUrl(baseUrl: string): string {
+  const base = baseUrl.replace(/\/$/, '');
+  // Accept both `http://127.0.0.1:PORT` and `http://127.0.0.1:PORT/v1`.
+  if (base.endsWith('/v1')) return `${base}/chat/completions`;
+  return `${base}/v1/chat/completions`;
 }
 
 export async function streamChat(
@@ -36,7 +54,7 @@ export async function streamChat(
   messages: ChatMessage[],
   handlers: StreamHandlers
 ): Promise<string> {
-  const url = `${cfg.baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+  const url = chatUrl(cfg.baseUrl);
   const body: Record<string, unknown> = {
     messages,
     stream: true,
@@ -52,6 +70,8 @@ export async function streamChat(
     body: JSON.stringify(body),
   });
 
+  let full = '';
+
   if (!res.ok) {
     const text = await res.text();
     let code = '';
@@ -61,36 +81,40 @@ export async function streamChat(
     } catch {
       /* keep raw */
     }
-    if (res.status === 401) {
-      throw new Error(
-        `MiMo Capability API 401${code}。请在项目目录执行 mimo llm-server issue --json，并更新 MIMO_LLM_API_KEY / MIMO_LLM_BASE_URL（若已 revoke 需重新 issue）。`
-      );
-    }
-    if (res.status === 404) {
-      throw new Error(
-        `MiMo Capability API 404${code}。检查 MIMO_MODEL 是否为实例已配置的 provider/model。`
-      );
-    }
-    throw new Error(`MiMo Capability API ${res.status}${code} ${text.slice(0, 200)}`);
+    const suffix = res.status === 401
+      ? `MiMo Capability API 401${code}。请在项目目录执行 mimo llm-server issue --json，并更新 MIMO_LLM_API_KEY / MIMO_LLM_BASE_URL（若已 revoke 需重新 issue）。`
+      : res.status === 404
+        ? `MiMo Capability API 404${code}。检查 MIMO_MODEL 是否为实例已配置的 provider/model；凭证异常时用 mimo llm-server list/revoke 后重新 issue。`
+        : `MiMo Capability API ${res.status}${code} ${text.slice(0, 200)}`;
+    const err = new Error(suffix) as Error & { partial?: string };
+    err.partial = full;
+    throw err;
   }
 
-  let full = '';
-  for await (const payload of sseLines(res)) {
-    if (payload === '[DONE]') break;
-    try {
-      const json = JSON.parse(payload) as {
-        choices?: Array<{ delta?: { content?: string } }>;
-      };
-      const delta = json.choices?.[0]?.delta?.content;
-      if (delta) {
-        full += delta;
-        handlers.onDelta(delta);
+  try {
+    for await (const payload of sseLines(res)) {
+      if (payload === '[DONE]') break;
+      try {
+        const json = JSON.parse(payload) as {
+          choices?: Array<{ delta?: { content?: string } }>;
+        };
+        const delta = json.choices?.[0]?.delta?.content;
+        if (delta) {
+          full += delta;
+          handlers.onDelta(delta);
+        }
+      } catch {
+        /* skip malformed chunk */
       }
-    } catch {
-      /* skip malformed chunk */
     }
+    return full;
+  } catch (e) {
+    const err = (e instanceof Error ? e : new Error(String(e))) as Error & {
+      partial?: string;
+    };
+    err.partial = full;
+    throw err;
   }
-  return full;
 }
 
 export function echoStream(

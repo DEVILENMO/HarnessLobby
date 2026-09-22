@@ -89,6 +89,9 @@ async function main() {
     ).json()) as Array<{ harnessId: string; externalSessionRef: string }>;
     const bs = bound.find((b) => b.harnessId === 'h_mimo');
     if (!bs) throw new Error('no mimo bound session');
+    if (!bs.externalSessionRef.startsWith('sess_mimo_')) {
+      throw new Error(`unexpected session ref ${bs.externalSessionRef}`);
+    }
 
     // missing LLM creds should exit non-zero
     const fail = spawn(process.execPath, ['--import', 'tsx', 'examples/mimo-harness/src/index.ts'], {

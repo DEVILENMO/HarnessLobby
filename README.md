@@ -24,6 +24,8 @@ MIMO_HARNESS_MODE=echo npm run dev:mimo-harness
 ```
 
 > MiMo Desktop 侧扩展是 Skill / MCP / workflow，不是 VS Code 式插件；Harness Lobby 的接入件是本目录的 Mode A plugin 进程。
+>
+> `base_url` 随 MiMoCode 会话变化，**不要缓存**；每次 `mimo llm-server issue --json` 后用新的 base_url。PowerShell 写法：`$env:MIMO_LLM_BASE_URL=...`。
 
 ## 像素 Logo
 

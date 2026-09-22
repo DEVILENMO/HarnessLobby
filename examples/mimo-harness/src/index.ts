@@ -76,9 +76,13 @@ const plugin = connectPlugin(url, {
         plugin.finalize(task.roomId, task.messageId, full);
       }
     } catch (err) {
-      const text = String(err instanceof Error ? err.message : err);
-      plugin.stream(task.roomId, task.messageId, `\n\n${text}`);
-      plugin.finalize(task.roomId, task.messageId, text);
+      const e = err as Error & { partial?: string };
+      const text = String(e?.message ?? err);
+      const partial = e?.partial ?? '';
+      const body = partial
+        ? `${partial}\n\n${text}`
+        : text;
+      plugin.finalize(task.roomId, task.messageId, body);
     } finally {
       plugin.status(task.roomId, 'idle');
     }

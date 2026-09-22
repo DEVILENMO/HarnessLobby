@@ -80,7 +80,7 @@ export class Store {
       id: uid('m'),
       roomId: embodied.id,
       senderId: 'system',
-      content: '房间「具身智能」已创建 · 适合放仿真/机器人任务',
+      content: '房间「具身智能」已创建 · @mock-harness @mimo-code 可派活',
       mentions: [],
       createdAt: nowStamp(),
       streamState: 'final',
