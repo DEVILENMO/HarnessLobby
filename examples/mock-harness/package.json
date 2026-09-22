@@ -1,0 +1,16 @@
+{
+  "name": "@harness-lobby/mock-harness",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@harness-lobby/plugin-sdk": "0.1.0",
+    "@harness-lobby/protocol": "0.1.0"
+  }
+}

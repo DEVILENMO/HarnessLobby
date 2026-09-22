@@ -1,0 +1,27 @@
+{
+  "name": "@harness-lobby/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "harness-lobby": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.tsx",
+    "icon": "tsx src/index.tsx icon",
+    "icon:full": "tsx src/index.tsx icon --full",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@harness-lobby/protocol": "0.1.0",
+    "ink": "^5.1.0",
+    "react": "^18.3.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/ws": "^8.5.13"
+  }
+}
