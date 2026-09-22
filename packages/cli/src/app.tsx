@@ -18,7 +18,13 @@ const HELP = [
   '/quit          退出',
 ].join('\n');
 
-export function App({ httpBase }: { httpBase: string }): React.ReactElement {
+export function App({
+  httpBase,
+  embedded = false,
+}: {
+  httpBase: string;
+  embedded?: boolean;
+}): React.ReactElement {
   const { exit } = useApp();
   const { isRawModeSupported } = useStdin();
   const client = useMemo(() => new LobbyClient(httpBase), [httpBase]);
@@ -214,6 +220,7 @@ export function App({ httpBase }: { httpBase: string }): React.ReactElement {
           </Text>
           <Text dimColor>
             {client.state.lobbyId} · {client.state.connected ? 'ws online' : 'ws offline'} · Mode A
+            {embedded ? ' · embedded' : ''}
           </Text>
           <Text dimColor>
             room {room ? `#${room.topic}` : '—'} · members {room?.memberIds.length ?? 0} · bound{' '}
