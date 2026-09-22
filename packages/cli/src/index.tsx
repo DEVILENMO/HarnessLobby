@@ -97,7 +97,7 @@ async function main(): Promise<void> {
       <App
         httpBase={stack.httpBase}
         embedded={stack.embedded}
-        mockState={stack.mockState}
+        getMockState={stack.getMockState}
       />
     );
     await ink.waitUntilExit();

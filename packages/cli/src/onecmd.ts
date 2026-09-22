@@ -12,10 +12,12 @@ export type OneCmdOptions = {
   httpBase: string;
 };
 
+export type MockState = 'off' | 'online' | 'unresolved';
+
 export type OneCmdHandle = {
   httpBase: string;
   embedded: boolean;
-  mockState: 'off' | 'online' | 'unresolved';
+  getMockState: () => MockState;
   stop: () => Promise<void>;
 };
 
@@ -50,6 +52,10 @@ async function isLobbyHealth(httpBase: string, timeoutMs = 800): Promise<boolean
 }
 
 function resolveMockEntry(): { cmd: string; args: string[] } | null {
+  const override = process.env.LOBBY_MOCK_ENTRY;
+  if (override && fs.existsSync(override)) {
+    return { cmd: process.execPath, args: [override] };
+  }
   try {
     const entry = require_.resolve('@harness-lobby/mock-harness');
     return { cmd: process.execPath, args: [entry] };
@@ -75,7 +81,8 @@ export async function startStack(opts: OneCmdOptions): Promise<OneCmdHandle> {
   let server: LobbyServer | null = null;
   let mock: ChildProcess | null = null;
   let stopPromise: Promise<void> | null = null;
-  let mockState: OneCmdHandle['mockState'] = 'off';
+  let intentionalStop = false;
+  const live = { mockState: 'off' as MockState };
 
   // Always prefer the port the user asked to bind when embedding.
   const bindBase = normalizeBase(`http://127.0.0.1:${opts.port}`);
@@ -85,6 +92,7 @@ export async function startStack(opts: OneCmdOptions): Promise<OneCmdHandle> {
   const stop = async (): Promise<void> => {
     if (stopPromise) return stopPromise;
     stopPromise = (async () => {
+      intentionalStop = true;
       if (mock && !mock.killed) {
         mock.kill();
         mock = null;
@@ -134,25 +142,31 @@ export async function startStack(opts: OneCmdOptions): Promise<OneCmdHandle> {
         stdio: ['ignore', 'ignore', 'pipe'],
       });
       mock.on('error', () => {
-        mockState = 'unresolved';
+        live.mockState = 'unresolved';
       });
       mock.on('exit', (code) => {
-        if (mockState !== 'off') mockState = code === 0 ? 'off' : 'unresolved';
+        if (intentionalStop) return;
+        live.mockState = code === 0 ? 'off' : 'unresolved';
       });
       mock.stderr?.on('data', (d) => {
         process.stderr.write(`[mock] ${String(d)}`);
       });
       await sleep(500);
-      mockState = mock.killed ? 'unresolved' : 'online';
+      // `killed` is only true when WE killed it — use exitCode for crash detection
+      if (mock.exitCode !== null || mock.signalCode !== null) {
+        live.mockState = 'unresolved';
+      } else {
+        live.mockState = 'online';
+      }
     } else {
-      mockState = 'unresolved';
+      live.mockState = 'unresolved';
     }
   }
 
   return {
     httpBase,
     embedded,
-    mockState,
+    getMockState: () => live.mockState,
     stop,
   };
 }

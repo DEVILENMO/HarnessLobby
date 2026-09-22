@@ -115,7 +115,44 @@ async function main() {
     }
     console.log('ONECMD port-conflict PASS');
   } finally {
-    await new Promise<void>((r) => blocker.close(() => r()));
+    await new Promise<void>((r) => {
+      blocker.close(() => r());
+      setTimeout(r, 300);
+    });
+  }
+
+  // mock crash within settle window must not report online
+  const os = await import('node:os');
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const bad = path.join(os.tmpdir(), `mock-crash-${Date.now()}.js`);
+  fs.writeFileSync(bad, 'process.exit(3);', 'utf8');
+  const prev = process.env.LOBBY_MOCK_ENTRY;
+  process.env.LOBBY_MOCK_ENTRY = bad;
+  try {
+    const crashed = await startStack({
+      port: 4492,
+      withMock: true,
+      external: false,
+      httpBase: 'http://127.0.0.1:4492',
+    });
+    try {
+      const st = crashed.getMockState();
+      if (st !== 'unresolved') {
+        throw new Error(`expected unresolved after mock crash, got ${st}`);
+      }
+      console.log('ONECMD mock-crash PASS');
+    } finally {
+      await crashed.stop();
+    }
+  } finally {
+    if (prev === undefined) delete process.env.LOBBY_MOCK_ENTRY;
+    else process.env.LOBBY_MOCK_ENTRY = prev;
+    try {
+      fs.unlinkSync(bad);
+    } catch {
+      /* ignore */
+    }
   }
 }
 
