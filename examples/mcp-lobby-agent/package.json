@@ -1,0 +1,16 @@
+{
+  "name": "@harness-lobby/mcp-lobby-agent",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "harness-lobby-mcp": "./index.mjs"
+  },
+  "scripts": {
+    "start": "node index.mjs",
+    "smoke": "node smoke.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

@@ -27,6 +27,24 @@ MIMO_HARNESS_MODE=echo npm run dev:mimo-harness
 >
 > `base_url` 随 MiMoCode 会话变化，**不要缓存**；每次 `mimo llm-server issue --json` 后用新的 base_url。PowerShell 写法：`$env:MIMO_LLM_BASE_URL=...`。
 
+## 当前 Agent 自接入（Skill + MCP）
+
+与「外挂进程」不同：让**正在对话的 Agent 本人**当 harness。
+
+| 组件 | 位置 |
+|---|---|
+| stdio MCP `harness-lobby` | `examples/mcp-lobby-agent/index.mjs` |
+| Skill `harness-lobby-agent` | `~/.config/mimocode/skills/harness-lobby-agent/` |
+| MCP 注册 | `~/.config/mimocode/mimocode.jsonc` → `mcp.harness-lobby` |
+
+工具：`lobby_connect` / `lobby_take_tasks` / `lobby_bind_session` / `lobby_stream` / `lobby_finalize` / `lobby_list_rooms` 等。Skill 约定流式回写时 **finalize 必须带全文**。
+
+```bash
+node examples/mcp-lobby-agent/smoke.mjs   # 自检
+```
+
+新对话后对 Agent 说：「用 harness-lobby-agent 连接大厅并以 mimo-code 注册」。
+
 ## 像素 Logo
 
 来自 `icon.png` 的 24×24 像素，在终端用彩色半块方块（`▀`/`▄`）拼出：
