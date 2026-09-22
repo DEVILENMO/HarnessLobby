@@ -21,9 +21,11 @@ const HELP = [
 export function App({
   httpBase,
   embedded = false,
+  mockState = 'off',
 }: {
   httpBase: string;
   embedded?: boolean;
+  mockState?: 'off' | 'online' | 'unresolved';
 }): React.ReactElement {
   const { exit } = useApp();
   const { isRawModeSupported } = useStdin();
@@ -220,7 +222,8 @@ export function App({
           </Text>
           <Text dimColor>
             {client.state.lobbyId} · {client.state.connected ? 'ws online' : 'ws offline'} · Mode A
-            {embedded ? ' · embedded' : ''}
+            {embedded ? ' · embedded' : ' · external'}
+            {mockState === 'unresolved' ? ' · mock offline' : mockState === 'off' ? '' : ''}
           </Text>
           <Text dimColor>
             room {room ? `#${room.topic}` : '—'} · members {room?.memberIds.length ?? 0} · bound{' '}

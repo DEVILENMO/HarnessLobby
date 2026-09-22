@@ -18,8 +18,9 @@ TUI 启动页也会显示同一枚像素 icon。
 
 ```bash
 npm install
+npm run build   # 首次需要，生成各包 dist
 npm run lobby
-# 或全局/本地安装后：lobby
+# 或在 PATH 上直接：lobby
 ```
 
 一条命令会：内嵌 Lobby Server → 拉起 mock-harness → 进入 TUI。退出时一并清理。

@@ -37,6 +37,9 @@ export class LobbyServer {
       void this.handleHttp(req, res);
     });
     this.wss = new WebSocketServer({ server: this.httpServer });
+    // ws may re-emit server bind errors; keep them from becoming unhandled
+    this.wss.on('error', () => undefined);
+    this.httpServer.on('error', () => undefined);
     this.wss.on('connection', (socket, req) => {
       const url = new URL(req.url ?? '/', `http://${this.host}`);
       if (url.searchParams.get('role') === 'plugin') {
@@ -48,8 +51,22 @@ export class LobbyServer {
   }
 
   async listen(): Promise<void> {
-    await new Promise<void>((resolve) => {
-      this.httpServer.listen(this.port, this.host, () => resolve());
+    await new Promise<void>((resolve, reject) => {
+      const onError = (err: Error): void => {
+        cleanup();
+        reject(err);
+      };
+      const onListening = (): void => {
+        cleanup();
+        resolve();
+      };
+      const cleanup = (): void => {
+        this.httpServer.removeListener('error', onError);
+        this.httpServer.removeListener('listening', onListening);
+      };
+      this.httpServer.on('error', onError);
+      this.httpServer.on('listening', onListening);
+      this.httpServer.listen(this.port, this.host);
     });
   }
 

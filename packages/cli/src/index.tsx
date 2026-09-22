@@ -23,7 +23,13 @@ function parseArgs(argv: string[]): CliArgs {
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--port') {
-      port = Number(argv[i + 1] ?? port);
+      const raw = argv[i + 1];
+      const n = Number(raw);
+      if (!raw || !Number.isInteger(n) || n < 1 || n > 65535) {
+        console.error('用法：lobby --port <1-65535>');
+        process.exit(2);
+      }
+      port = n;
       i += 1;
       continue;
     }
@@ -67,23 +73,42 @@ async function main(): Promise<void> {
   const stack = await startStack({
     port: args.port,
     withMock: args.withMock,
-    external: args.external || Boolean(process.env.LOBBY_HTTP_URL),
+    external: args.external,
     httpBase: envHttp,
   });
 
-  const ink = render(<App httpBase={stack.httpBase} embedded={stack.embedded} />);
-  void ink.waitUntilExit().then(async () => {
-    await stack.stop();
-  });
-
-  const cleanup = () => {
-    void stack.stop().then(() => process.exit(0));
+  let exiting = false;
+  const cleanup = async (code: number): Promise<void> => {
+    if (exiting) return;
+    exiting = true;
+    try {
+      await stack.stop();
+    } catch {
+      /* ignore */
+    }
+    process.exit(code);
   };
-  process.on('SIGINT', cleanup);
-  process.on('SIGTERM', cleanup);
+
+  process.on('SIGINT', () => void cleanup(0));
+  process.on('SIGTERM', () => void cleanup(0));
+
+  try {
+    const ink = render(
+      <App
+        httpBase={stack.httpBase}
+        embedded={stack.embedded}
+        mockState={stack.mockState}
+      />
+    );
+    await ink.waitUntilExit();
+    await cleanup(0);
+  } catch (err) {
+    console.error(String(err));
+    await cleanup(1);
+  }
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error(String(err));
   process.exit(1);
 });

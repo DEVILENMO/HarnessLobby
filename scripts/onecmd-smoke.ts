@@ -78,6 +78,45 @@ async function main() {
   } finally {
     await s2.stop();
   }
+
+  // --port must bind/probe the requested port, not fall back to 4311
+  const s3 = await startStack({
+    port: 4490,
+    withMock: false,
+    external: false,
+    httpBase: 'http://127.0.0.1:4311',
+  });
+  try {
+    if (!s3.embedded) throw new Error('expected embed on --port 4490 even if 4311 exists');
+    if (!s3.httpBase.includes(':4490')) throw new Error(`bad base ${s3.httpBase}`);
+    console.log('ONECMD --port PASS');
+  } finally {
+    await s3.stop();
+  }
+
+  // occupied by non-lobby should throw clear error
+  const net = await import('node:net');
+  const blocker = net.createServer();
+  await new Promise<void>((r) => blocker.listen(4491, '127.0.0.1', () => r()));
+  try {
+    let errMsg = '';
+    try {
+      await startStack({
+        port: 4491,
+        withMock: false,
+        external: false,
+        httpBase: 'http://127.0.0.1:4491',
+      });
+    } catch (e) {
+      errMsg = String(e);
+    }
+    if (!errMsg.includes('已被占用') && !errMsg.includes('无法监听')) {
+      throw new Error(`expected port conflict error, got: ${errMsg || '(no throw)'}`);
+    }
+    console.log('ONECMD port-conflict PASS');
+  } finally {
+    await new Promise<void>((r) => blocker.close(() => r()));
+  }
 }
 
 main().catch((e) => {
