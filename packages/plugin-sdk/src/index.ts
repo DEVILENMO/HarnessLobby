@@ -38,10 +38,22 @@ export function connectPlugin(
   let closed = false;
   let retryMs = 500;
   let registered = false;
+  const outbox: PluginToLobby[] = [];
+  const finalized = new Set<string>();
 
   const send = (msg: PluginToLobby): void => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(msg));
+    } else {
+      outbox.push(msg);
+      if (outbox.length > 2000) outbox.splice(0, outbox.length - 2000);
+    }
+  };
+
+  const flushOutbox = (): void => {
+    while (outbox.length && socket && socket.readyState === WebSocket.OPEN) {
+      const msg = outbox.shift();
+      if (msg) socket.send(JSON.stringify(msg));
     }
   };
 
@@ -57,6 +69,7 @@ export function connectPlugin(
         token: handlers.token,
         profile: handlers.profile,
       });
+      flushOutbox();
     });
 
     socket.on('message', (raw) => {
@@ -73,6 +86,7 @@ export function connectPlugin(
           harnessId = msg.harnessId;
           log(`[plugin-sdk] registered as ${msg.harnessId} rooms=${msg.assignedRooms.join(',') || '-'}`);
           handlers.onRegister?.(msg);
+          flushOutbox();
           break;
         }
         case 'register_nack': {
@@ -128,9 +142,12 @@ export function connectPlugin(
       return registered;
     },
     stream(roomId, messageId, delta) {
+      if (finalized.has(messageId)) return;
       send({ type: 'message.stream', roomId, messageId, delta });
     },
     finalize(roomId, messageId, content) {
+      if (finalized.has(messageId)) return;
+      finalized.add(messageId);
       send({ type: 'message.final', roomId, messageId, content });
     },
     status(roomId, state) {

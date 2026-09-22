@@ -30,6 +30,7 @@ export function App({ httpBase }: { httpBase: string }): React.ReactElement {
   ]);
   const [err, setErr] = useState<string | null>(null);
   const bootRef = useRef(false);
+  const completionRef = useRef({ idx: 0 });
 
   const bump = () => setTick((t) => t + 1);
 
@@ -158,21 +159,41 @@ export function App({ httpBase }: { httpBase: string }): React.ReactElement {
     }
   };
 
+  const completeMention = (value: string): string => {
+    const m = value.match(/@([a-z0-9-]*)$/i);
+    if (!m) return value;
+    const q = m[1].toLowerCase();
+    const pool = harnesses.filter((h) => h.slug.toLowerCase().startsWith(q));
+    if (!pool.length) return value;
+    const idx = completionRef.current.idx % pool.length;
+    const pick = pool[idx];
+    completionRef.current.idx = (idx + 1) % pool.length;
+    return value.replace(/@([a-z0-9-]*)$/i, `@${pick.slug} `);
+  };
+
   useInput((raw, key) => {
     if (!isRawModeSupported) return;
+    if (key.tab) {
+      setInput((s) => completeMention(s));
+      return;
+    }
     if (key.return && !key.shift) {
+      completionRef.current.idx = 0;
       void submit();
       return;
     }
     if (key.backspace || key.delete) {
+      completionRef.current.idx = 0;
       setInput((s) => s.slice(0, -1));
       return;
     }
     if (key.escape) {
+      completionRef.current.idx = 0;
       setInput('');
       return;
     }
     if (raw && !key.ctrl && !key.meta) {
+      completionRef.current.idx = 0;
       setInput((s) => s + raw);
     }
   });
@@ -263,7 +284,7 @@ export function App({ httpBase }: { httpBase: string }): React.ReactElement {
         <Text color="#2FD4B8">▍</Text>
       </Box>
       <Text dimColor>
-        enter 发送 · @mock-harness 派活 · /help 命令
+        enter 发送 · @ + tab 补全 harness · /help 命令
       </Text>
     </Box>
   );

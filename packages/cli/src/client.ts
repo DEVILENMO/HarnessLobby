@@ -98,7 +98,10 @@ export class LobbyClient {
       this.state.connected = false;
       this.socket = null;
       this.emit();
-      setTimeout(() => this.connectWs(), 1000);
+      setTimeout(() => {
+        this.connectWs();
+        void this.refresh().catch(() => undefined);
+      }, 1000);
     });
     this.socket.on('message', (raw) => {
       let ev: ClientEvent;
@@ -156,9 +159,6 @@ export class LobbyClient {
     const res = await this.postJson<{ reset: boolean }>(
       `/rooms/${roomId}/reset-session`,
       { slug }
-    );
-    this.state.bound = this.state.bound.filter(
-      (b) => !(b.roomId === roomId && b.harnessId.endsWith(slug))
     );
     await this.refresh();
     return res.reset;

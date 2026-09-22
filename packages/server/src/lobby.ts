@@ -202,8 +202,13 @@ export class LobbyServer {
   private applyStream(roomId: string, messageId: string, delta: string, harnessId: string): void {
     const list = this.store.roomMessages(roomId);
     let msg = list.find((m) => m.id === messageId);
+    if (msg && msg.streamState === 'final') {
+      // final is terminal — ignore late deltas
+      return;
+    }
     if (!msg) {
       msg = this.store.newMessage({
+        id: messageId,
         roomId,
         senderId: harnessId,
         content: delta,
@@ -221,8 +226,13 @@ export class LobbyServer {
   private applyFinal(roomId: string, messageId: string, content: string, harnessId: string): void {
     const list = this.store.roomMessages(roomId);
     let msg = list.find((m) => m.id === messageId);
+    if (msg && msg.streamState === 'final') {
+      // idempotent final
+      return;
+    }
     if (!msg) {
       msg = this.store.newMessage({
+        id: messageId,
         roomId,
         senderId: harnessId,
         content,
@@ -277,6 +287,17 @@ export class LobbyServer {
       streamState: 'final',
     });
     this.broadcastClient({ type: 'message.created', roomId, message: msg });
+    for (const conn of this.plugins.values()) {
+      if (conn.socket.readyState === conn.socket.OPEN) {
+        this.send(conn.socket, {
+          type: 'room.message',
+          roomId,
+          messageId: msg.id,
+          content: msg.content,
+          senderId: msg.senderId,
+        });
+      }
+    }
 
     const room = this.store.rooms.get(roomId);
     if (!room) return msg;
@@ -324,16 +345,10 @@ export class LobbyServer {
         });
       } else {
         this.store.enqueuePending(harness.id, taskPayload);
-        this.broadcastClient({
-          type: 'message.updated',
-          roomId,
-          message: {
-            ...replyShell,
-            content: `(挂起) plugin 离线，任务已入队，重连后补投 · ${slug}`,
-            streamState: 'final',
-            state: 'idle',
-          },
-        });
+        replyShell.content = `(挂起) plugin 离线，任务已入队，重连后补投 · ${slug}`;
+        replyShell.streamState = 'final';
+        replyShell.state = 'idle';
+        this.broadcastClient({ type: 'message.updated', roomId, message: replyShell });
       }
     }
 
