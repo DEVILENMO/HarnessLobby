@@ -1,5 +1,5 @@
 /**
- * Regression probes for review criticals (stream final immutability, messageId continuity).
+ * Regression probes: stream final immutability, messageId continuity, offline pending shell.
  */
 import { LobbyServer } from '../packages/server/src/lobby.js';
 import WebSocket from 'ws';
@@ -13,16 +13,15 @@ async function main() {
   const server = new LobbyServer({ port });
   await server.listen();
 
-  // --- messageId continuity + final immutability via plugin socket ---
   const ws = new WebSocket(`ws://127.0.0.1:${port}?role=plugin`);
   await new Promise((r) => ws.on('open', r));
   ws.send(
     JSON.stringify({
       type: 'register_lobby',
-      token: 'ilv_mock_open',
+      token: 'ilv_mimo_open',
       profile: {
-        slug: 'mock-harness',
-        displayName: 'Mock',
+        slug: 'mimo-code',
+        displayName: 'MiMo Code',
         capabilities: ['x'],
         protocol: 'mode-a',
       },
@@ -32,7 +31,7 @@ async function main() {
 
   const rooms = [...server.store.rooms.values()];
   const room = rooms.find((r) => r.topic === '具身智能') ?? rooms[0];
-  server.postUserMessage(room.id, 'u_you', '@mock-harness probe task');
+  server.postUserMessage(room.id, 'u_you', '@mimo-code probe task');
   await sleep(50);
 
   const customId = 'm_custom_123';
@@ -87,18 +86,13 @@ async function main() {
     );
   }
 
-  // offline pending shell persisted
-  const offline = server.store.harnesses.get('h_mock');
+  const offline = server.store.harnesses.get('h_mimo');
   if (offline) offline.status = 'offline';
-  // force no plugin by closing first
   ws.close();
+  await sleep(80);
+  server.postUserMessage(room.id, 'u_you', '@mimo-code offline probe');
   await sleep(50);
-  // re-open is not connected — post another mention after closing
-  // harness still mapped to closed socket briefly; wait for close handler
-  await sleep(50);
-  server.postUserMessage(room.id, 'u_you', '@mock-harness offline probe');
-  await sleep(50);
-  const shells = server.store.roomMessages(room.id).filter((m) => m.senderId === 'h_mock');
+  const shells = server.store.roomMessages(room.id).filter((m) => m.senderId === 'h_mimo');
   const hung = shells.find((m) => m.content.includes('挂起'));
   if (!hung || hung.streamState !== 'final') {
     throw new Error(`FAIL: offline shell not persisted ${JSON.stringify(shells.slice(-3))}`);

@@ -12,7 +12,6 @@ async function main() {
   const port = 4511;
   const stack = await startStack({
     port,
-    withMock: false,
     external: false,
     httpBase: `http://127.0.0.1:${port}`,
   });

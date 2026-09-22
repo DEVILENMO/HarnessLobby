@@ -1,14 +1,11 @@
 /**
- * E2E smoke: boot server + mock-harness, dispatch a task via REST, assert stream.
- * Usage: node --import tsx scripts/e2e-smoke.ts
+ * E2E smoke: boot server + mimo-harness (echo), dispatch a task via REST, assert stream.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const NPM = process.env.MIMO_NPM ?? 'npm';
-const NODE = process.env.execPath ?? process.execPath;
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -43,22 +40,23 @@ async function main() {
   const port = 4311;
   const httpBase = `http://127.0.0.1:${port}`;
 
-  const server = run(NODE, ['--import', 'tsx', 'packages/server/src/index.ts'], {
+  const server = run(process.execPath, ['--import', 'tsx', 'packages/server/src/index.ts'], {
     LOBBY_PORT: String(port),
   });
   await waitOk(`${httpBase}/health`);
 
-  const mock = run(NODE, ['--import', 'tsx', 'examples/mock-harness/src/index.ts'], {
+  const mimo = run(process.execPath, ['--import', 'tsx', 'examples/mimo-harness/src/index.ts'], {
     LOBBY_WS_URL: `ws://127.0.0.1:${port}`,
-    LOBBY_TOKEN: 'ilv_mock_open',
+    LOBBY_TOKEN: 'ilv_mimo_open',
+    MIMO_HARNESS_MODE: 'echo',
   });
   await sleep(800);
 
   const health = (await (await fetch(`${httpBase}/health`)).json()) as {
     plugins: string[];
   };
-  if (!health.plugins.includes('h_mock')) {
-    throw new Error(`mock not registered: ${JSON.stringify(health)}`);
+  if (!health.plugins.includes('h_mimo')) {
+    throw new Error(`mimo not registered: ${JSON.stringify(health)}`);
   }
 
   const rooms = (await (await fetch(`${httpBase}/rooms`)).json()) as {
@@ -73,7 +71,7 @@ async function main() {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       senderId: 'u_you',
-      content: '@mock-harness 帮我把 ROS 节点改成支持 GelSight',
+      content: '@mimo-code 帮我把 ROS 节点改成支持 GelSight',
     }),
   });
 
@@ -88,9 +86,10 @@ async function main() {
       content: string;
     }>;
     finalMsg =
-      msgs.find((m) => m.senderId === 'h_mock' && m.streamState === 'final') ??
-      null;
-    if (finalMsg && finalMsg.content.includes('GelSight')) break;
+      msgs.find((m) => m.senderId === 'h_mimo' && m.streamState === 'final') ?? null;
+    if (finalMsg && (finalMsg.content.includes('GelSight') || finalMsg.content.includes('echo'))) {
+      break;
+    }
     await sleep(300);
   }
 
@@ -99,11 +98,15 @@ async function main() {
   ).json()) as Array<{ externalSessionRef: string }>;
 
   server.kill();
-  mock.kill();
+  mimo.kill();
 
-  if (!finalMsg) throw new Error('no final message from mock-harness');
+  if (!finalMsg) throw new Error('no final message from mimo-harness');
   if (!bound.length) throw new Error('bound session not created');
-  if (!finalMsg.content.includes('GelSight') && !finalMsg.content.includes('ROS')) {
+  if (
+    !finalMsg.content.includes('GelSight') &&
+    !finalMsg.content.includes('ROS') &&
+    !finalMsg.content.includes('echo')
+  ) {
     throw new Error(`reply missing echo: ${finalMsg.content.slice(0, 80)}`);
   }
 

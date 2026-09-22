@@ -8,7 +8,6 @@ import { startStack } from './onecmd.js';
 type CliArgs = {
   cmd: string | null;
   port: number;
-  withMock: boolean;
   external: boolean;
   rest: string[];
 };
@@ -17,7 +16,6 @@ function parseArgs(argv: string[]): CliArgs {
   const rest: string[] = [];
   let cmd: string | null = null;
   let port = Number(process.env.LOBBY_PORT ?? 4311);
-  let withMock = true;
   let external = false;
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -31,10 +29,6 @@ function parseArgs(argv: string[]): CliArgs {
       }
       port = n;
       i += 1;
-      continue;
-    }
-    if (a === '--no-mock') {
-      withMock = false;
       continue;
     }
     if (a === '--external') {
@@ -52,7 +46,7 @@ function parseArgs(argv: string[]): CliArgs {
     rest.push(a);
   }
 
-  return { cmd, port, withMock, external, rest };
+  return { cmd, port, external, rest };
 }
 
 async function main(): Promise<void> {
@@ -72,7 +66,6 @@ async function main(): Promise<void> {
   const envHttp = process.env.LOBBY_HTTP_URL ?? 'http://127.0.0.1:4311';
   const stack = await startStack({
     port: args.port,
-    withMock: args.withMock,
     external: args.external,
     httpBase: envHttp,
   });
@@ -94,11 +87,7 @@ async function main(): Promise<void> {
 
   try {
     const ink = render(
-      <App
-        httpBase={stack.httpBase}
-        embedded={stack.embedded}
-        getMockState={stack.getMockState}
-      />
+      <App httpBase={stack.httpBase} embedded={stack.embedded} />
     );
     await ink.waitUntilExit();
     await cleanup(0);

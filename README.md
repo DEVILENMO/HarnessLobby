@@ -66,26 +66,25 @@ npm run lobby
 # 或在 PATH 上直接：lobby
 ```
 
-一条命令会：内嵌 Lobby Server → 拉起 mock-harness → 进入 TUI。退出时一并清理。
+一条命令会：内嵌 Lobby Server → 进入 TUI。退出时一并清理。harness 需自行接入（如 `mimo-harness` / MCP 自接入），**不再附带假工人**。
 
 常用旗标：
 
 | 命令 | 说明 |
 |---|---|
 | `lobby` | 一键全开（默认） |
-| `lobby --no-mock` | 不拉 mock-harness |
 | `lobby --external` | 只连已有 Lobby |
 | `lobby --port 4311` | 内嵌 server 端口 |
 
 在 TUI 中：
 
 ```
-@mock-harness 帮我把 ROS 节点改成支持 GelSight
+@mimo-code 帮我把 ROS 节点改成支持 GelSight
 ```
 
-会 lazy 创建 BoundSession，并看到 mock 流式回写。
+会 lazy 创建 BoundSession，并看到 harness 流式回写。
 
-## 进阶（三终端）
+## 进阶（多终端）
 
 ```bash
 npm install
@@ -93,8 +92,8 @@ npm install
 # 1) Lobby Server
 npm run dev:server
 
-# 2) Mock Harness Plugin
-npm run dev:mock-harness
+# 2) MiMo Harness Plugin（echo 演示）
+MIMO_HARNESS_MODE=echo npm run dev:mimo-harness
 
 # 3) CLI TUI
 npm run dev:cli
@@ -103,10 +102,10 @@ npm run dev:cli
 在 CLI 中：
 
 ```
-@mock-harness 帮我把 ROS 节点改成支持 GelSight
+@mimo-code 帮我把 ROS 节点改成支持 GelSight
 ```
 
-会 lazy 创建 BoundSession，并看到 mock 流式回写。
+会 lazy 创建 BoundSession，并看到流式回写。
 
 ## Slash 命令
 
@@ -127,7 +126,8 @@ npm run dev:cli
 - `packages/server` — Lobby Server（REST + WS + mention 路由）
 - `packages/plugin-sdk` — harness 侧 Mode A SDK
 - `packages/cli` — Ink TUI + 像素 icon
-- `examples/mock-harness` — 独立 mock 插件进程
+- `examples/mimo-harness` — MiMo Mode A 插件（Capability API / echo）
+- `examples/mcp-lobby-agent` — 当前 Agent 自接入用 stdio MCP
 
 ## 环境变量
 
@@ -137,4 +137,4 @@ npm run dev:cli
 | `LOBBY_HOST` | `127.0.0.1` | Server 绑定地址 |
 | `LOBBY_WS_URL` | `ws://127.0.0.1:4311` | plugin 连接地址 |
 | `LOBBY_HTTP_URL` | `http://127.0.0.1:4311` | CLI REST 地址 |
-| `LOBBY_TOKEN` | `ilv_mock_open` | mock-harness token |
+| `LOBBY_TOKEN` | `ilv_mimo_open` | harness install token（seed） |

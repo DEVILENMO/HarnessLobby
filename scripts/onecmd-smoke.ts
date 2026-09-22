@@ -1,27 +1,49 @@
 /**
- * Verify one-command stack: embedded server + auto mock + dispatch without TUI.
+ * Verify one-command stack: embedded server + dispatch path without TUI.
  */
 import { startStack } from '../packages/cli/src/onecmd.js';
+import { spawn } from 'node:child_process';
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 async function main() {
   const port = 4488;
   const stack = await startStack({
     port,
-    withMock: true,
     external: false,
     httpBase: `http://127.0.0.1:${port}`,
   });
 
+  let mimo: ReturnType<typeof spawn> | null = null;
   try {
     if (!stack.embedded) throw new Error('expected embedded server');
-    const health = (await (await fetch(`${stack.httpBase}/health`)).json()) as {
-      plugins: string[];
-      lobbyId: string;
-    };
-    if (!health.lobbyId) throw new Error('no lobbyId');
-    if (!health.plugins.includes('h_mock')) {
-      throw new Error(`mock not registered: ${JSON.stringify(health)}`);
+    mimo = spawn(
+      process.execPath,
+      ['--import', 'tsx', 'examples/mimo-harness/src/index.ts'],
+      {
+        env: {
+          ...process.env,
+          LOBBY_WS_URL: stack.httpBase.replace(/^http/, 'ws'),
+          LOBBY_TOKEN: 'ilv_mimo_open',
+          MIMO_HARNESS_MODE: 'echo',
+        },
+        stdio: ['ignore', 'ignore', 'pipe'],
+      }
+    );
+    let registered = false;
+    for (let i = 0; i < 40; i += 1) {
+      await sleep(150);
+      const health = (await (await fetch(`${stack.httpBase}/health`)).json()) as {
+        plugins: string[];
+      };
+      if (health.plugins.includes('h_mimo')) {
+        registered = true;
+        break;
+      }
     }
+    if (!registered) throw new Error('mimo not registered');
 
     const rooms = (await (await fetch(`${stack.httpBase}/rooms`)).json()) as {
       id: string;
@@ -33,39 +55,39 @@ async function main() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         senderId: 'u_you',
-        content: '@mock-harness onecmd probe',
+        content: '@mimo-code onecmd probe',
       }),
     });
 
     let ok = false;
     for (let i = 0; i < 40; i += 1) {
-      await new Promise((r) => setTimeout(r, 250));
+      await sleep(250);
       const msgs = (await (
         await fetch(`${stack.httpBase}/rooms/${room.id}/messages`)
       ).json()) as Array<{ senderId: string; streamState: string; content: string }>;
       ok = msgs.some(
-        (m) => m.senderId === 'h_mock' && m.streamState === 'final' && m.content.includes('onecmd')
+        (m) =>
+          m.senderId === 'h_mimo' &&
+          m.streamState === 'final' &&
+          (m.content.includes('onecmd') || m.content.includes('echo'))
       );
       if (ok) break;
     }
-    if (!ok) throw new Error('mock did not finalize reply');
+    if (!ok) throw new Error('mimo did not finalize reply');
 
     const bound = (await (
       await fetch(`${stack.httpBase}/rooms/${room.id}/bound-sessions`)
     ).json()) as unknown[];
     if (!bound.length) throw new Error('no bound session');
 
-    // --no-mock path already covered by logic; test external reuse after stop? skip
-
     console.log('ONECMD PASS');
   } finally {
+    if (mimo && !mimo.killed) mimo.kill();
     await stack.stop();
   }
 
-  // second boot with --no-mock semantics
   const s2 = await startStack({
     port: 4489,
-    withMock: false,
     external: false,
     httpBase: 'http://127.0.0.1:4489',
   });
@@ -73,28 +95,25 @@ async function main() {
     const h = (await (await fetch(`${s2.httpBase}/health`)).json()) as {
       plugins: string[];
     };
-    if (h.plugins.length) throw new Error('unexpected plugins with --no-mock');
-    console.log('ONECMD --no-mock PASS');
+    if (h.plugins.length) throw new Error('unexpected plugins before connect');
+    console.log('ONECMD clean-boot PASS');
   } finally {
     await s2.stop();
   }
 
-  // --port must bind/probe the requested port, not fall back to 4311
   const s3 = await startStack({
     port: 4490,
-    withMock: false,
     external: false,
     httpBase: 'http://127.0.0.1:4311',
   });
   try {
-    if (!s3.embedded) throw new Error('expected embed on --port 4490 even if 4311 exists');
+    if (!s3.embedded) throw new Error('expected embed on --port 4490');
     if (!s3.httpBase.includes(':4490')) throw new Error(`bad base ${s3.httpBase}`);
     console.log('ONECMD --port PASS');
   } finally {
     await s3.stop();
   }
 
-  // occupied by non-lobby should throw clear error
   const net = await import('node:net');
   const blocker = net.createServer();
   await new Promise<void>((r) => blocker.listen(4491, '127.0.0.1', () => r()));
@@ -103,7 +122,6 @@ async function main() {
     try {
       await startStack({
         port: 4491,
-        withMock: false,
         external: false,
         httpBase: 'http://127.0.0.1:4491',
       });
@@ -119,40 +137,6 @@ async function main() {
       blocker.close(() => r());
       setTimeout(r, 300);
     });
-  }
-
-  // mock crash within settle window must not report online
-  const os = await import('node:os');
-  const fs = await import('node:fs');
-  const path = await import('node:path');
-  const bad = path.join(os.tmpdir(), `mock-crash-${Date.now()}.js`);
-  fs.writeFileSync(bad, 'process.exit(3);', 'utf8');
-  const prev = process.env.LOBBY_MOCK_ENTRY;
-  process.env.LOBBY_MOCK_ENTRY = bad;
-  try {
-    const crashed = await startStack({
-      port: 4492,
-      withMock: true,
-      external: false,
-      httpBase: 'http://127.0.0.1:4492',
-    });
-    try {
-      const st = crashed.getMockState();
-      if (st !== 'unresolved') {
-        throw new Error(`expected unresolved after mock crash, got ${st}`);
-      }
-      console.log('ONECMD mock-crash PASS');
-    } finally {
-      await crashed.stop();
-    }
-  } finally {
-    if (prev === undefined) delete process.env.LOBBY_MOCK_ENTRY;
-    else process.env.LOBBY_MOCK_ENTRY = prev;
-    try {
-      fs.unlinkSync(bad);
-    } catch {
-      /* ignore */
-    }
   }
 }
 

@@ -17,7 +17,6 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@harness-lobby/mock-harness": "0.1.0",
     "@harness-lobby/protocol": "0.1.0",
     "@harness-lobby/server": "0.1.0",
     "ink": "^5.1.0",

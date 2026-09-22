@@ -35,21 +35,6 @@ export class Store {
     };
     this.members.set(you.id, you);
 
-    const mock: Harness = {
-      id: 'h_mock',
-      mode: 'A',
-      slug: 'mock-harness',
-      displayName: 'Mock Harness',
-      avatar: 'MH',
-      capabilities: ['读文件', '写文件', '跑命令'],
-      authToken: 'ilv_mock_open',
-      pluginEndpoint: 'ws://plugin/mock-harness',
-      assignedRooms: [],
-      status: 'offline',
-      protocol: 'mode-a',
-    };
-    this.harnesses.set(mock.id, mock);
-
     const mimo: Harness = {
       id: 'h_mimo',
       mode: 'A',
@@ -65,13 +50,13 @@ export class Store {
     };
     this.harnesses.set(mimo.id, mimo);
 
-    const lobby = this.createRoom('大厅', ['u_you', 'h_mock', 'h_mimo']);
-    const embodied = this.createRoom('具身智能', ['u_you', 'h_mock', 'h_mimo']);
+    const lobby = this.createRoom('大厅', ['u_you', 'h_mimo']);
+    const embodied = this.createRoom('具身智能', ['u_you', 'h_mimo']);
     this.messages.get(lobby.id)?.push({
       id: uid('m'),
       roomId: lobby.id,
       senderId: 'system',
-      content: '房间「大厅」已创建 · @mock-harness @mimo-code 可派活',
+      content: '房间「大厅」已创建 · @mimo-code 可派活',
       mentions: [],
       createdAt: nowStamp(),
       streamState: 'final',
@@ -80,7 +65,7 @@ export class Store {
       id: uid('m'),
       roomId: embodied.id,
       senderId: 'system',
-      content: '房间「具身智能」已创建 · @mock-harness @mimo-code 可派活',
+      content: '房间「具身智能」已创建 · @mimo-code 可派活',
       mentions: [],
       createdAt: nowStamp(),
       streamState: 'final',

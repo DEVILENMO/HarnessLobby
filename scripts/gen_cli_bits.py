@@ -83,7 +83,7 @@ TUI slash 命令
   /rooms /join /new /members /harnesses /bound /reset /help /quit
 
 派活
-  在输入框写  @mock-harness 你的任务
+  在输入框写  @mimo-code 你的任务
 `;
 
 export function printHelp(): void {
