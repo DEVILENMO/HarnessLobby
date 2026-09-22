@@ -50,13 +50,28 @@ export class Store {
     };
     this.harnesses.set(mock.id, mock);
 
-    const lobby = this.createRoom('大厅', ['u_you', 'h_mock']);
-    const embodied = this.createRoom('具身智能', ['u_you', 'h_mock']);
+    const mimo: Harness = {
+      id: 'h_mimo',
+      mode: 'A',
+      slug: 'mimo-code',
+      displayName: 'MiMo Code',
+      avatar: 'MM',
+      capabilities: ['对话', '读上下文摘要', '流式回写'],
+      authToken: 'ilv_mimo_open',
+      pluginEndpoint: 'ws://plugin/mimo-harness',
+      assignedRooms: [],
+      status: 'offline',
+      protocol: 'mode-a',
+    };
+    this.harnesses.set(mimo.id, mimo);
+
+    const lobby = this.createRoom('大厅', ['u_you', 'h_mock', 'h_mimo']);
+    const embodied = this.createRoom('具身智能', ['u_you', 'h_mock', 'h_mimo']);
     this.messages.get(lobby.id)?.push({
       id: uid('m'),
       roomId: lobby.id,
       senderId: 'system',
-      content: '房间「大厅」已创建 · @mock-harness 可派活',
+      content: '房间「大厅」已创建 · @mock-harness @mimo-code 可派活',
       mentions: [],
       createdAt: nowStamp(),
       streamState: 'final',
@@ -65,7 +80,7 @@ export class Store {
       id: uid('m'),
       roomId: embodied.id,
       senderId: 'system',
-      content: '房间「具身智能」已创建 · 适合放仿真/机器人任务',
+      content: '房间「具身智能」已创建 · @mock-harness @mimo-code 可派活',
       mentions: [],
       createdAt: nowStamp(),
       streamState: 'final',

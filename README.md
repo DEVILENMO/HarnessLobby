@@ -2,6 +2,31 @@
 
 跨 harness 的终端协作大厅（Mode A 可运行骨架）。
 
+## 接入 MiMo（mimo-code）
+
+用 MiMoCode 自己的 Capability API 当模型后端，不把 provider key 交给插件：
+
+```bash
+# 1) 在 MiMoCode 项目目录签发 token（会打印 base_url / api_key）
+mimo llm-server issue --json --label harness-lobby-mimo
+
+# 2) 导出后启动插件
+export MIMO_LLM_BASE_URL=...   # json 里的 base_url
+export MIMO_LLM_API_KEY=...    # json 里的 api_key
+export MIMO_MODEL=...          # 可选，provider/model
+npm run dev:mimo-harness
+```
+
+在 Lobby 里 `@mimo-code 你的任务` 即可。离线演示：
+
+```bash
+MIMO_HARNESS_MODE=echo npm run dev:mimo-harness
+```
+
+> MiMo Desktop 侧扩展是 Skill / MCP / workflow，不是 VS Code 式插件；Harness Lobby 的接入件是本目录的 Mode A plugin 进程。
+>
+> `base_url` 随 MiMoCode 会话变化，**不要缓存**；每次 `mimo llm-server issue --json` 后用新的 base_url。PowerShell 写法：`$env:MIMO_LLM_BASE_URL=...`。
+
 ## 像素 Logo
 
 来自 `icon.png` 的 24×24 像素，在终端用彩色半块方块（`▀`/`▄`）拼出：
