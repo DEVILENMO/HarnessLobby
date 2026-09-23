@@ -5,6 +5,8 @@ import {
   type Member,
   type Message,
   type Room,
+  parseMentions,
+  instanceSlug,
   nowStamp,
 } from '@harness-lobby/protocol';
 
@@ -65,7 +67,22 @@ export class Store {
     };
     this.harnesses.set(minimax.id, minimax);
 
-    this.createRoom('大厅', ['u_you', 'h_mimo', 'h_minimax'], null);
+    const zcode: Harness = {
+      id: 'h_zcode',
+      mode: 'A',
+      slug: 'zcode',
+      displayName: 'ZCode',
+      avatar: 'ZC',
+      capabilities: ['对话', '代码生成', '文件读写', '命令执行', '流式回写'],
+      authToken: 'ilv_zcode_open',
+      pluginEndpoint: 'ws://plugin/zcode-harness',
+      assignedRooms: [],
+      status: 'offline',
+      protocol: 'mode-a',
+    };
+    this.harnesses.set(zcode.id, zcode);
+
+    this.createRoom('大厅', ['u_you', 'h_mimo', 'h_minimax', 'h_zcode'], null);
   }
 
   findRoomByTopic(topic: string): Room | undefined {
@@ -123,6 +140,39 @@ export class Store {
       if (h.authToken === token) return h;
     }
     return undefined;
+  }
+
+  /** 连接即注册：slug 变成 `harness_name-computer_name`，不占用预置 slot */
+  registerInstance(profile: HarnessProfile): Harness {
+    const fullSlug = instanceSlug(profile.slug, profile.computerName);
+    let harness = this.findHarnessBySlug(fullSlug);
+    if (!harness) {
+      harness = {
+        id: `h_${fullSlug.toLowerCase()}`,
+        mode: 'A',
+        slug: fullSlug,
+        displayName: profile.displayName || profile.slug,
+        avatar: profile.avatar || fullSlug.slice(0, 2).toUpperCase(),
+        capabilities: profile.capabilities?.length ? profile.capabilities : ['对话'],
+        authToken: instanceSlug('ilv', profile.computerName),
+        pluginEndpoint: 'ws://plugin',
+        assignedRooms: [],
+        status: 'offline',
+        protocol: 'mode-a',
+      };
+      // id 防碰撞
+      while (this.harnesses.has(harness.id)) {
+        harness.id = `${harness.id}_${Math.random().toString(36).slice(2, 5)}`;
+      }
+      this.harnesses.set(harness.id, harness);
+    } else {
+      harness.displayName = profile.displayName || harness.displayName;
+      harness.avatar = profile.avatar || harness.avatar;
+      harness.capabilities = profile.capabilities?.length
+        ? profile.capabilities
+        : harness.capabilities;
+    }
+    return harness;
   }
 
   roomMessages(roomId: string): Message[] {

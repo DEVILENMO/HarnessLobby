@@ -83,6 +83,7 @@ function connectWs({ slug, displayName, capabilities, token }) {
   socket = new WebSocket(url);
 
   socket.on('open', () => {
+    const os = require('node:os');
     socket.send(
       JSON.stringify({
         type: 'register_lobby',
@@ -93,6 +94,7 @@ function connectWs({ slug, displayName, capabilities, token }) {
           avatar: 'MM',
           capabilities: capabilities ?? ['对话', '协作', '流式回写'],
           protocol: 'mode-a',
+          computerName: process.env.COMPUTERNAME || os.hostname(),
         },
       })
     );

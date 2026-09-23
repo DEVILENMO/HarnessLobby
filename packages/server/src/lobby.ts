@@ -121,22 +121,26 @@ export class LobbyServer {
       }
 
       if (msg.type === 'register_lobby') {
-        const harness = this.store.findHarnessByToken(msg.token);
-        if (!harness) {
-          this.send(socket, { type: 'register_nack', error: 'invalid token' });
-          socket.close(4001, 'invalid token');
-          return;
-        }
+        // 连接即注册：不认领固定 slot，自动得到 harness_name-computer_name
+        const harness = this.store.registerInstance({
+          ...msg.profile,
+          computerName: msg.profile?.computerName,
+          slug: msg.profile?.slug || 'harness',
+          displayName: msg.profile?.displayName || msg.profile?.slug || 'Harness',
+          capabilities: msg.profile?.capabilities ?? [],
+          protocol: 'mode-a',
+        });
         harnessId = harness.id;
         harness.status = 'online';
-        harness.slug = msg.profile.slug || harness.slug;
-        harness.displayName = msg.profile.displayName || harness.displayName;
-        harness.capabilities = msg.profile.capabilities?.length
-          ? msg.profile.capabilities
-          : harness.capabilities;
         harness.assignedRooms = [...this.store.rooms.values()]
-          .filter((r) => r.memberIds.includes(harness.id))
+          .filter((r) => r.memberIds.includes(harness.id) || r.ownerId === null)
           .map((r) => r.id);
+        // 公共大厅默认挂上
+        for (const r of this.store.rooms.values()) {
+          if (r.ownerId === null && !r.memberIds.includes(harness.id)) {
+            r.memberIds.push(harness.id);
+          }
+        }
 
         this.store.ensureMemberFromHarness(harness, {
           ...msg.profile,
@@ -296,6 +300,21 @@ export class LobbyServer {
   postUserMessage(roomId: string, senderId: string, content: string): Message {
     const harnessSlugs = [...this.store.harnesses.values()].map((h) => h.slug);
     const mentions = parseMentions(content, harnessSlugs);
+    // 允许 @mimo-code 命中唯一实例 mimo-code-LAPTOP-xxx
+    for (const h of this.store.harnesses.values()) {
+      const base = h.slug.split('-').slice(0, -1).join('-') || h.slug;
+      const re = new RegExp(`@${base}(?![A-Za-z0-9-])`, 'gi');
+      if (re.test(content) && !mentions.includes(h.slug)) {
+        // only auto-expand if exactly one instance matches this base name
+        const twins = [...this.store.harnesses.values()].filter(
+          (x) =>
+            x.slug === base ||
+            x.slug.startsWith(`${base}-`) ||
+            x.slug.split('-').slice(0, -1).join('-') === base
+        );
+        if (twins.length === 1) mentions.push(h.slug);
+      }
+    }
     const msg = this.store.newMessage({
       roomId,
       senderId,

@@ -1,4 +1,5 @@
 import WebSocket from 'ws';
+import os from 'node:os';
 import type {
   ActivityState,
   HarnessProfile,
@@ -68,10 +69,14 @@ export function connectPlugin(
 
     socket.on('open', () => {
       retryMs = 500;
+      const profile: HarnessProfile = {
+        ...handlers.profile,
+        computerName: handlers.profile.computerName ?? os.hostname(),
+      };
       send({
         type: 'register_lobby',
         token: handlers.token,
-        profile: handlers.profile,
+        profile,
       });
       flushOutbox();
     });

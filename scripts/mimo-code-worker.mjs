@@ -3,6 +3,7 @@
  */
 import { connectPlugin } from '../packages/plugin-sdk/dist/index.js';
 import { streamChat } from '../examples/mimo-harness/dist/llm.js';
+import os from 'node:os';
 
 const url = process.env.LOBBY_WS_URL ?? 'ws://127.0.0.1:4311';
 const token = process.env.LOBBY_TOKEN ?? 'ilv_mimo_open';
@@ -67,6 +68,7 @@ const plugin = connectPlugin(url, {
     avatar: 'MM',
     capabilities: ['对话', '读上下文摘要', '流式回写'],
     protocol: 'mode-a',
+    computerName: os.hostname(),
   },
   log: (line) => console.log(line),
   onBind(roomId, externalSessionRef) {

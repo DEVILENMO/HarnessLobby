@@ -10,6 +10,8 @@ export interface HarnessProfile {
   avatar?: string;
   capabilities: string[];
   protocol: 'mode-a';
+  /** 主机名，如 LAPTOP-OD2APUUK；注册后 slug 变成 `<slug>-<computerName>` */
+  computerName?: string;
 }
 
 export interface Harness extends HarnessProfile {
@@ -120,13 +122,20 @@ export type ClientEvent =
 export function parseMentions(text: string, known: Iterable<string>): string[] {
   const set = new Set(known);
   const out: string[] = [];
-  const re = /@([a-z0-9][a-z0-9-]*)/gi;
+  const re = /@([A-Za-z0-9][A-Za-z0-9-]*)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text))) {
-    const slug = m[1].toLowerCase();
+    const slug = m[1];
+    // 精确匹配注册名；也允许只写 harness 名时匹配唯一实例
     if (set.has(slug) && !out.includes(slug)) out.push(slug);
   }
   return out;
+}
+
+export function instanceSlug(baseSlug: string, computerName?: string): string {
+  const b = (baseSlug || 'harness').trim();
+  const c = (computerName || '').trim();
+  return c ? `${b}-${c}` : b;
 }
 
 export function nowStamp(): string {
