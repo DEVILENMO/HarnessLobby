@@ -21,7 +21,10 @@ export interface LobbyServerOptions {
   host?: string;
 }
 
+const SHELL_TIMEOUT_MS = 45_000;
+
 export class LobbyServer {
+  private shellTimers = new Map<string, NodeJS.Timeout>();
   readonly store = new Store();
   private httpServer: http.Server;
   private wss: WebSocketServer;
@@ -71,6 +74,8 @@ export class LobbyServer {
   }
 
   async close(): Promise<void> {
+    for (const t of this.shellTimers.values()) clearTimeout(t);
+    this.shellTimers.clear();
     for (const conn of this.plugins.values()) {
       conn.socket.close();
     }
@@ -374,6 +379,21 @@ export class LobbyServer {
         boundSessionId: session.id,
       });
       this.broadcastClient({ type: 'message.created', roomId, message: replyShell });
+      const t = setTimeout(() => {
+        const cur = this.store.roomMessages(roomId).find((m) => m.id === replyShell.id);
+        if (cur && cur.streamState !== 'final') {
+          cur.content = cur.content || '（超时未响应）';
+          cur.streamState = 'final';
+          cur.state = 'idle';
+          this.broadcastClient({ type: 'message.updated', roomId, message: cur });
+          const h = this.store.harnesses.get(harness.id);
+          if (h && h.status !== 'online') {
+            h.status = 'online';
+            this.broadcastClient({ type: 'harness.presence', harnessId: h.id, status: 'online' });
+          }
+        }
+      }, SHELL_TIMEOUT_MS);
+      this.shellTimers.set(replyShell.id, t);
 
       const taskPayload: LobbyToPlugin = {
         type: 'task.new',
