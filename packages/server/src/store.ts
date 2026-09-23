@@ -5,7 +5,6 @@ import {
   type Member,
   type Message,
   type Room,
-  parseMentions,
   instanceSlug,
   nowStamp,
 } from '@harness-lobby/protocol';
