@@ -21,6 +21,8 @@ export interface Harness extends HarnessProfile {
   authToken: string;
   pluginEndpoint: string;
   assignedRooms: string[];
+  /** 注册时的产品名（不含主机名后缀），用于 @短名 自动路由 */
+  baseSlug?: string;
 }
 
 export interface Room {
@@ -127,7 +129,7 @@ export function parseMentions(text: string, known: Iterable<string>): string[] {
   while ((m = re.exec(text))) {
     const slug = m[1];
     // 精确匹配注册名；也允许只写 harness 名时匹配唯一实例
-    if (set.has(slug) && !out.includes(slug)) out.push(slug);
+    if (slug.toLowerCase() === 'all') { if (!out.includes('*')) out.push('*'); } else if (set.has(slug) && !out.includes(slug)) out.push(slug);
   }
   return out;
 }

@@ -1,0 +1,18 @@
+{
+  "name": "dev-archarnesslobby-06197ece",
+  "plugins": [
+    {
+      "name": "harness-lobby",
+      "source": "./harness-lobby",
+      "version": "0.2.0",
+      "description": "Connect the current ZCode session to the local Harness Lobby (protocol v0.2: auto-register as slug-computerName, heartbeat, cross-machine).",
+      "displayName": "Harness Lobby",
+      "displayName_i18n": {
+        "zh-CN": "Harness 大厅接入"
+      },
+      "description_i18n": {
+        "zh-CN": "把当前 ZCode 会话作为 harness 实例接入本地 Harness Lobby：连接即注册（slug-主机名）、真实心跳、断线重连、领任务流式回写。"
+      }
+    }
+  ]
+}

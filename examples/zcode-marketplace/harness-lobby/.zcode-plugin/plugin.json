@@ -1,0 +1,9 @@
+{
+  "name": "harness-lobby",
+  "version": "0.2.0",
+  "description": "Connect the current ZCode session to the local Harness Lobby (protocol v0.2: auto-register as slug-computerName, heartbeat, cross-machine).",
+  "author": { "name": "DEVILENMO" },
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills",
+  "commands": "./commands"
+}

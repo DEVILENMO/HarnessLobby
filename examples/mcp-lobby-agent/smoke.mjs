@@ -96,7 +96,7 @@ try {
   console.log('MCP lobby_connect PASS');
 
   const health = await (await fetch('http://127.0.0.1:4399/health')).json();
-  if (!health.plugins.includes('h_mimo')) {
+  if (!health.plugins.some((p) => p.startsWith('h_mimo-code'))) {
     throw new Error(`server plugins ${JSON.stringify(health.plugins)}`);
   }
   console.log('MCP register visible in lobby PASS');

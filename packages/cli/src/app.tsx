@@ -296,6 +296,10 @@ export function App({
       </Box>
 
       <Box marginY={1} flexDirection="column" flexGrow={1} minHeight={10}>
+        
+                {logs.map((l, i) => (
+          <Text key={String(i)} color={l.tone === 'err' ? '#FF6B7A' : l.tone === 'ok' ? '#3DDC97' : '#7E93A3'}>{l.text}</Text>
+        ))}
         {err ? (
           <Text color="#FF6B7A">{err}</Text>
         ) : (
@@ -327,18 +331,6 @@ export function App({
             );
           })
         )}
-        {logs.length > 0 ? (
-          <Box flexDirection="column" marginTop={1}>
-            {logs.slice(-4).map((l, i) => (
-              <Text
-                key={i}
-                color={l.tone === 'err' ? '#FF6B7A' : l.tone === 'ok' ? '#3DDC97' : '#7E93A3'}
-              >
-                {l.text}
-              </Text>
-            ))}
-          </Box>
-        ) : null}
       </Box>
 
       <Box borderStyle="single" borderColor="#24333F" paddingX={1}>

@@ -36,52 +36,9 @@ export class Store {
     };
     this.members.set(you.id, you);
 
-    const mimo: Harness = {
-      id: 'h_mimo',
-      mode: 'A',
-      slug: 'mimo-code',
-      displayName: 'MiMo Code',
-      avatar: 'MM',
-      capabilities: ['对话', '读上下文摘要', '流式回写'],
-      authToken: 'ilv_mimo_open',
-      pluginEndpoint: 'ws://plugin/mimo-harness',
-      assignedRooms: [],
-      status: 'offline',
-      protocol: 'mode-a',
-    };
-    this.harnesses.set(mimo.id, mimo);
-
-    const minimax: Harness = {
-      id: 'h_minimax',
-      mode: 'A',
-      slug: 'minimax-code',
-      displayName: 'MiniMax Code',
-      avatar: 'MC',
-      capabilities: ['代码生成', '文件读写', '命令执行', '联网搜索'],
-      authToken: 'ilv_minimax_open',
-      pluginEndpoint: 'ws://plugin/minimax-harness',
-      assignedRooms: [],
-      status: 'offline',
-      protocol: 'mode-a',
-    };
-    this.harnesses.set(minimax.id, minimax);
-
-    const zcode: Harness = {
-      id: 'h_zcode',
-      mode: 'A',
-      slug: 'zcode',
-      displayName: 'ZCode',
-      avatar: 'ZC',
-      capabilities: ['对话', '代码生成', '文件读写', '命令执行', '流式回写'],
-      authToken: 'ilv_zcode_open',
-      pluginEndpoint: 'ws://plugin/zcode-harness',
-      assignedRooms: [],
-      status: 'offline',
-      protocol: 'mode-a',
-    };
-    this.harnesses.set(zcode.id, zcode);
-
-    this.createRoom('大厅', ['u_you', 'h_mimo', 'h_minimax', 'h_zcode'], null);
+    // 连接即注册（harness_name-computer_name），不再预置固定 token slot：
+    // 预置 slug 会截胡 @短名 精确匹配，让任务派给永远 offline 的幽灵 slot。
+    this.createRoom('大厅', ['u_you'], null);
   }
 
   findRoomByTopic(topic: string): Room | undefined {
@@ -150,6 +107,7 @@ export class Store {
         id: `h_${fullSlug.toLowerCase()}`,
         mode: 'A',
         slug: fullSlug,
+        baseSlug: (profile.slug || 'harness').trim(),
         displayName: profile.displayName || profile.slug,
         avatar: profile.avatar || fullSlug.slice(0, 2).toUpperCase(),
         capabilities: profile.capabilities?.length ? profile.capabilities : ['对话'],

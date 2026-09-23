@@ -207,6 +207,9 @@ export class LobbyServer {
 
     socket.on('close', () => {
       if (!harnessId) return;
+      // 同一实例被更新连接接管（如 keepalive + 会话先后注册）时，旧连接断开不降级 presence
+      const current = this.plugins.get(harnessId);
+      if (current && current.socket !== socket) return;
       this.plugins.delete(harnessId);
       const h = this.store.harnesses.get(harnessId);
       if (h) {
@@ -298,21 +301,17 @@ export class LobbyServer {
   }
 
   postUserMessage(roomId: string, senderId: string, content: string): Message {
-    const harnessSlugs = [...this.store.harnesses.values()].map((h) => h.slug);
-    const mentions = parseMentions(content, harnessSlugs);
-    // 允许 @mimo-code 命中唯一实例 mimo-code-LAPTOP-xxx
-    for (const h of this.store.harnesses.values()) {
-      const base = h.slug.split('-').slice(0, -1).join('-') || h.slug;
+    const instances = [...this.store.harnesses.values()];
+    const mentions = parseMentions(content, instances.map((h) => h.slug));
+    // 允许 @mimo-code 命中唯一实例 mimo-code-LAPTOP-xxx：
+    // base 取注册时的产品名；主机名可能自带连字符，不能按 '-' 切尾段推导
+    const bases = new Set(instances.map((h) => h.baseSlug ?? h.slug));
+    for (const base of bases) {
       const re = new RegExp(`@${base}(?![A-Za-z0-9-])`, 'gi');
-      if (re.test(content) && !mentions.includes(h.slug)) {
-        // only auto-expand if exactly one instance matches this base name
-        const twins = [...this.store.harnesses.values()].filter(
-          (x) =>
-            x.slug === base ||
-            x.slug.startsWith(`${base}-`) ||
-            x.slug.split('-').slice(0, -1).join('-') === base
-        );
-        if (twins.length === 1) mentions.push(h.slug);
+      if (!re.test(content)) continue;
+      const twins = instances.filter((x) => (x.baseSlug ?? x.slug) === base);
+      if (twins.length === 1 && !mentions.includes(twins[0].slug)) {
+        mentions.push(twins[0].slug);
       }
     }
     const msg = this.store.newMessage({
@@ -338,9 +337,22 @@ export class LobbyServer {
     const room = this.store.rooms.get(roomId);
     if (!room) return msg;
 
-    for (const slug of mentions) {
-      const harness = this.store.findHarnessBySlug(slug);
-      if (!harness) continue;
+    let targets: import('@harness-lobby/protocol').Harness[] = [];
+    if (mentions.length) {
+      for (const slug of mentions) {
+        const h0 = this.store.findHarnessBySlug(slug);
+        if (h0) targets.push(h0);
+      }
+    } else {
+      targets = [...this.store.harnesses.values()].filter((h) =>
+        room.memberIds.includes(h.id) || room.ownerId === null
+      );
+    }
+    const isBroadcast = mentions.length === 0 && targets.length > 0;
+    for (const harness of targets) {
+      void 0;
+      
+      
       // @harness：owner 或公共房可拉入成员
       if (!room.memberIds.includes(harness.id)) {
         const canInvite = room.ownerId === null || room.ownerId === senderId;
@@ -367,7 +379,7 @@ export class LobbyServer {
         type: 'task.new',
         roomId,
         messageId: replyShell.id,
-        mentions: [slug],
+        mentions: isBroadcast ? ['*'] : [harness.slug],
         taskText: content,
         contextSnapshot: this.store.contextSnapshot(roomId),
       };
@@ -383,7 +395,7 @@ export class LobbyServer {
         });
       } else {
         this.store.enqueuePending(harness.id, taskPayload);
-        replyShell.content = `(挂起) plugin 离线，任务已入队，重连后补投 · ${slug}`;
+        replyShell.content = `(挂起) plugin 离线，任务已入队，重连后补投 · ${harness.slug}`;
         replyShell.streamState = 'final';
         replyShell.state = 'idle';
         this.broadcastClient({ type: 'message.updated', roomId, message: replyShell });
