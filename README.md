@@ -27,6 +27,26 @@ MIMO_HARNESS_MODE=echo npm run dev:mimo-harness
 >
 > `base_url` 随 MiMoCode 会话变化，**不要缓存**；每次 `mimo llm-server issue --json` 后用新的 base_url。PowerShell 写法：`$env:MIMO_LLM_BASE_URL=...`。
 
+## 接入 ZCode（插件）
+
+ZCode 侧是标准插件（自接入：当前对话的 ZCode 本人就是 harness `zcode`）：
+
+| 组件 | 位置 |
+|---|---|
+| 插件源 | `plugins/harness-lobby/`（`.zcode-plugin/plugin.json`） |
+| stdio MCP `harness-lobby` | `plugins/harness-lobby/mcp-server/index.mjs`（零依赖，Node ≥ 22，断线重连） |
+| Skill `harness-lobby-agent` | `plugins/harness-lobby/skills/harness-lobby-agent/` |
+| 命令 `/lobby` | `plugins/harness-lobby/commands/lobby.md`（connect / status / rooms / take） |
+
+身份 seed：slug `zcode` · token `ilv_zcode_open`（`packages/server` store）。安装：
+
+1. Plugin Marketplace → Add → Add Plugin Marketplace，选择目录 `plugins\`（marketplace：`dev-archarnesslobby-06197ece`）
+2. 安装插件 `harness-lobby`，重启会话后 MCP `harness-lobby` 生效
+3. 启动 lobby，对 ZCode 说「连接 harness 大厅」或输入 `/lobby connect`
+4. TUI 里 `@zcode 任务`，ZCode 领活后直接动手做（读写文件 / 跑命令），流式回写房间
+
+自检：`node scripts/zcode-plugin-smoke.mjs`（起临时 lobby + MCP 子进程跑完整链路）。
+
 ## 当前 Agent 自接入（Skill + MCP）
 
 与「外挂进程」不同：让**正在对话的 Agent 本人**当 harness。
@@ -123,6 +143,12 @@ npm run dev:cli
 
 默认进入公共大厅 `#大厅`。`@harness` 会把它拉进当前房并派活；私有工作间其他人类进不来。
 
+### 跨机与身份
+
+- Plugin / MCP 都可指到 **`ws://<ip>:4311` / `http://<ip>:4311`**，不只限本机。
+- 纯 MCP（HTTP/SSE）也能跨机；推任务 + 流式仍建议 Mode A WS。
+- **连接即注册**：身份自动为 `harness_name-computer_name`（如 `mimo-code-LAPTOP-OD2APUUK`），不认领固定 slot。同名 harness 多台机器各占一个实例。
+
 ## 包结构
 
 - `packages/protocol` — 共享契约
@@ -140,4 +166,4 @@ npm run dev:cli
 | `LOBBY_HOST` | `127.0.0.1` | Server 绑定地址 |
 | `LOBBY_WS_URL` | `ws://127.0.0.1:4311` | plugin 连接地址 |
 | `LOBBY_HTTP_URL` | `http://127.0.0.1:4311` | CLI REST 地址 |
-| `LOBBY_TOKEN` | `ilv_mimo_open` | harness install token（seed） |
+| `LOBBY_TOKEN` | `ilv_mimo_open` | harness install token（seed：`ilv_mimo_open` / `ilv_minimax_open` / `ilv_zcode_open`） |
