@@ -61,6 +61,10 @@ export function connectPlugin(
     if (closed) return;
     const sep = url.includes('?') ? '&' : '?';
     socket = new WebSocket(`${url}${sep}role=plugin`);
+    // Attach error first — unhandled 'error' crashes the host process.
+    socket.on('error', (err) => {
+      log(`[plugin-sdk] socket error: ${String(err)}`);
+    });
 
     socket.on('open', () => {
       retryMs = 500;

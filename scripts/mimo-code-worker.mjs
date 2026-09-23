@@ -8,6 +8,13 @@ const url = process.env.LOBBY_WS_URL ?? 'ws://127.0.0.1:4311';
 const token = process.env.LOBBY_TOKEN ?? 'ilv_mimo_open';
 const sessions = new Map();
 
+process.on('uncaughtException', (err) => {
+  console.error('[mimo-code worker] uncaught', err?.message ?? err);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('[mimo-code worker] unhandledRejection', err);
+});
+
 function llmConfig() {
   const baseUrl = process.env.MIMO_LLM_BASE_URL;
   const apiKey = process.env.MIMO_LLM_API_KEY;
