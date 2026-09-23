@@ -14,7 +14,7 @@ TUI slash 命令
   /room switch <主题>   切换房间（同时干多个活）
   /room list            我能进的房间
   /room add <slug>      把 harness 拉进当前房
-  /members /harnesses /bound /reset /help /quit
+  /members /harness(s) /bound /reset /help /quit
 
 派活
   @ + tab 补全 harness slug，例如  @mimo-code 你的任务

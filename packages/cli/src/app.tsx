@@ -11,7 +11,7 @@ const HELP = [
   '/room switch <主题>   切换房间（swich 同义）',
   '/room list           我能进的房间',
   '/room add <slug>     把 harness 拉进当前房',
-  '/members /harnesses /bound /reset /help /quit',
+  '/members /harness /harnesses /bound /reset /help /quit',
 ].join('\n');
 
 export function App({
@@ -163,6 +163,7 @@ export function App({
           'dim'
         );
         break;
+      case '/harness':
       case '/harnesses':
         pushLog(
           client.state.harnesses
