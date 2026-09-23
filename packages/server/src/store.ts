@@ -50,8 +50,22 @@ export class Store {
     };
     this.harnesses.set(mimo.id, mimo);
 
-    // 公共大厅：所有人可进；工作间由用户 /room create 创建且仅 owner 可进
-    this.createRoom('大厅', ['u_you', 'h_mimo'], null);
+    const minimax: Harness = {
+      id: 'h_minimax',
+      mode: 'A',
+      slug: 'minimax-code',
+      displayName: 'MiniMax Code',
+      avatar: 'MC',
+      capabilities: ['代码生成', '文件读写', '命令执行', '联网搜索'],
+      authToken: 'ilv_minimax_open',
+      pluginEndpoint: 'ws://plugin/minimax-harness',
+      assignedRooms: [],
+      status: 'offline',
+      protocol: 'mode-a',
+    };
+    this.harnesses.set(minimax.id, minimax);
+
+    this.createRoom('大厅', ['u_you', 'h_mimo', 'h_minimax'], null);
   }
 
   findRoomByTopic(topic: string): Room | undefined {
